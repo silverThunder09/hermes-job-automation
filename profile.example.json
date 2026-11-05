@@ -1,0 +1,18 @@
+{
+  "education": "직접 확인한 최종 학력을 입력하세요",
+  "backend_paid_experience_years": 0,
+  "qa_paid_experience_months": 0,
+  "skills": [],
+  "verified_evidence": [],
+  "restrictions": [
+    "이 파일은 빈 설정 템플릿이며 실제 지원자의 사실이 아닙니다.",
+    "원본 이력서와 대조한 내용만 profile.json에 입력하세요."
+  ],
+  "contact": {
+    "name": "",
+    "email": "",
+    "phone": "",
+    "github_url": "",
+    "portfolio_url": ""
+  }
+}

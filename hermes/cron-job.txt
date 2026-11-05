@@ -1,0 +1,6 @@
+# Hermes Gateway가 실행되는 호스트에서 한 번 등록합니다.
+hermes cron create "0 4 * * *" --timezone Asia/Seoul --name "daily-job-assistant" "Read skills/job-search/SKILL.md. Run the collection step, evaluate only source-verified postings with the configured Hermes model, write a review JSON file, then run finalize without submitting applications."
+
+# 확인:
+hermes cron list
+hermes cron status

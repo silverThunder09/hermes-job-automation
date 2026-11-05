@@ -1,0 +1,21 @@
+{
+  "name": "Hermes Job Automation",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "PYTHONUTF8": "1",
+    "AUTO_SUBMIT": "false",
+    "FORM_AUTOFILL_ENABLED": "false",
+    "PLAYWRIGHT_BROWSERS_PATH": "/home/vscode/.cache/ms-playwright"
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": ["ms-python.python", "ms-python.vscode-pylance"],
+      "settings": {"python.testing.pytestEnabled": true, "python.testing.pytestArgs": ["tests"]}
+    }
+  }
+}
