@@ -10,6 +10,7 @@ from .collectors import all_collectors
 from .form_dry_run import run_local_form_dry_run
 from .finalize import finalize_review
 from .runner import get_health, run_pipeline
+from .state_checks import run_state_smoke, state_health
 
 
 APPROVAL_PHRASE = "I explicitly approve real application submission for this platform and posting scope."
@@ -65,6 +66,10 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="job-assist")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("health")
+    commands.add_parser("state-health", help="Read-only Supabase schema and private-bucket check.")
+    smoke = commands.add_parser("state-smoke", help="Retain a unique public storage sample; never upload or submit.")
+    smoke.add_argument("--explicit-write", action="store_true", help="Explicitly authorize retaining a new storage sample.")
+    smoke.add_argument("--file", help="Optional public-only JSON posting (company/title/url, optional platform/platform_id).")
     commands.add_parser("sources")
     ocr = commands.add_parser("ocr-image", help="Extract a local image with review-required Windows OCR.")
     ocr.add_argument("--file", required=True)
@@ -87,9 +92,11 @@ def main(argv=None) -> int:
     approval.add_argument("--valid-hours", type=int, default=24)
     approval.add_argument("--conditions", required=True)
     args = parser.parse_args(argv)
-    settings = Settings.load()
+    if args.command == "state-smoke" and not args.explicit_write:
+        parser.error("state-smoke requires --explicit-write; the public sample will be retained, not deleted.")
 
     try:
+        settings = Settings.load()
         if args.command == "ocr-image":
             from .ocr import extract_image_text
 
@@ -112,6 +119,13 @@ def main(argv=None) -> int:
                 _print(result)
         elif args.command == "health":
             _print(get_health(settings))
+        elif args.command == "state-health":
+            result = state_health(settings)
+            _print(result)
+            return 0 if result["status"] == "ready" else 1
+        elif args.command == "state-smoke":
+            _print(run_state_smoke(settings, explicit_write=args.explicit_write,
+                                   sample_file=Path(args.file).expanduser().resolve() if args.file else None))
         elif args.command == "sources":
             statuses = []
             for collector in all_collectors(settings):

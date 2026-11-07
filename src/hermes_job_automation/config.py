@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
 
@@ -52,6 +52,14 @@ class Settings:
     auto_submit: bool
     form_autofill_enabled: bool
     submission_approval_file: Path
+    state_backend: str = "supabase"
+    supabase_url: str = ""
+    supabase_secret_key: str = field(default="", repr=False)
+    supabase_storage_bucket: str = ""
+
+    def __post_init__(self) -> None:
+        if self.state_backend != "supabase":
+            raise ValueError("JOB_ASSIST_STATE_BACKEND supports only supabase; remove obsolete or invalid backend settings.")
 
     @classmethod
     def load(cls) -> "Settings":
@@ -85,6 +93,10 @@ class Settings:
             submission_approval_file=_path(
                 "SUBMISSION_APPROVAL_FILE", data_dir / "platform-submit-approvals.json"
             ),
+            state_backend=os.getenv("JOB_ASSIST_STATE_BACKEND", "supabase"),
+            supabase_url=os.getenv("SUPABASE_URL", "").strip(),
+            supabase_secret_key=os.getenv("SUPABASE_SECRET_KEY", "").strip(),
+            supabase_storage_bucket=os.getenv("SUPABASE_STORAGE_BUCKET", "").strip(),
         )
 
     def ensure_directories(self) -> None:
@@ -93,6 +105,8 @@ class Settings:
 
     def public_status(self) -> dict:
         return {
+            "state_backend": self.state_backend,
+            "supabase_configured": bool(self.supabase_url and self.supabase_secret_key and self.supabase_storage_bucket),
             "timezone": self.timezone,
             "google_sheet_configured": bool(self.google_sheet_id),
             "google_credentials_configured": bool(
