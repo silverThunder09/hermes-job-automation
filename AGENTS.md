@@ -23,6 +23,10 @@ Prepare evidence-backed job applications: posting analysis, official company-sit
 - Default to local draft/review. `--execute` can write Google/Telegram outputs; it is not a test flag.
 - Windows image OCR is not a Linux cloud OCR implementation. A skill procedure is not proof of an integrated autonomous pipeline.
 
+## Governance
+
+Before implementation, read `CONTRIBUTING.md` for issue-to-PR flow and `docs/CONVENTIONS.md` for code/branch/commit rules. Before selecting or changing a database, framework, model provider, infrastructure, major dependency, security or retention policy, prepare a Proposed ADR under `docs/adr/` and obtain the user's decision. Mark retrospective records Historical; distinguish decision, implementation, deployment and verification.
+
 ## Git
 
-Work on a branch for subsequent changes and verify tests before proposing a PR. Keep commits focused. Do not force-push or rewrite history without permission.
+Work on a focused branch and preserve unrelated changes. Verify tests and review before proposing a PR. Commit, publish issues/PRs, push, merge or change repository settings only within explicit user authorization. Templates and local workflow files do not prove remote branch protection is enabled.
