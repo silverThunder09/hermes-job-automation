@@ -1,0 +1,40 @@
+name: 기능·설계·운영 변경
+description: 문제, 범위, 완료 기준과 ADR 필요 여부를 정리합니다.
+title: "[Change] "
+body:
+  - type: markdown
+    attributes:
+      value: "기술 선택은 구현 전 ADR로 비교합니다. 이슈 자체는 외부 게시·비용 발생·삭제·실제 지원·예약 가동 권한을 대신하지 않습니다."
+  - type: textarea
+    id: problem
+    attributes:
+      label: 해결할 문제와 목적
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: 범위와 제외 범위
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 완료 기준과 검증 방법
+      description: 로컬 구현·원격 적용·실제 동작 검증을 나눠주세요.
+    validations:
+      required: true
+  - type: textarea
+    id: adr
+    attributes:
+      label: ADR·대안·비용·보안 영향
+      description: 기존/신규 ADR 경로 또는 ADR 불필요 이유. 미확인 사항은 명시하세요.
+    validations:
+      required: true
+  - type: textarea
+    id: operations
+    attributes:
+      label: 외부 변경과 복구 계획
+      description: 필요한 승인, 데이터 보존·마이그레이션·롤백/전진 수정. 없으면 없다고 명시.
+    validations:
+      required: true
