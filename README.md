@@ -51,6 +51,21 @@ Hermes Cron은 수집 결과를 받은 뒤 skills/job-search/SKILL.md 절차에 
 
 & "$RuntimeRoot\.venv\Scripts\python.exe" -m hermes_job_automation.cli finalize --file .\data\hermes-review.json
 
+## 오프라인 브라우저 실행 진단
+
+패키지와 Chromium을 설치한 환경에서 운영 설정 없이 확인합니다.
+
+```text
+python -m hermes_job_automation.cli runtime-check
+# 또는 job-assist runtime-check
+```
+
+- `.env`/`Settings.load()`·사용자 프로필·인증 파일을 읽지 않습니다. 임의 URL/프로필 입력 옵션도 없습니다.
+- 매번 새 headless Chromium과 비공유 context를 열고 offline·요청 차단·service worker 차단을 적용합니다. 내장 합성 HTML의 한국어 DOM, JavaScript, 양식 입력만 확인하며 제출은 시도하지 않습니다.
+- stdout JSON의 `schema_version: 1`, 실제 `browser.version`, boolean `checks`, 관찰한 `page_network_requests`와 `submission_occurred`를 확인하세요. 모두 통과하면 `status: verified`/종료 코드 0, 검사 불일치는 `failed`/1, 실행 불가는 `error`/1입니다. 오류는 일반 메시지와 예외 타입만 출력하며 원문·경로·인증정보는 숨깁니다. 관찰 전 실패한 요청 수·제출 여부·브라우저 버전은 `null`, 미통과/미실행 검사는 `false`입니다.
+- 요청 수는 **진단 페이지의 Playwright request 이벤트** 수이지 브라우저 전체 트래픽이나 OS 방화벽 검증이 아닙니다. 실제 사이트·모델·인증·DB·예약은 `scope`에 미검증으로 표시합니다. `health`의 `next_run_schedule: null`, `schedule_status: not_verified`도 예약 등록을 검사하지 않았다는 뜻이며 미등록을 확인했다는 뜻은 아닙니다.
+- 기존 GitHub Actions Ubuntu/Windows 테스트 job도 이 명령을 실행합니다. 로컬 성공과 해당 변경의 원격 CI 성공은 별도 증거이며 운영 배포·예약 가동을 의미하지 않습니다.
+
 ## 공고별 수정과 이미지 OCR
 
 사용자가 공고 URL과 이력서/포트폴리오를 첨부하면 `skills/job-tailoring/SKILL.md`의 **공고 분석 → 공식 회사 사이트 분석(불가하면 생략 이유 기록) → 원본을 보존한 이력서 수정 → 적합도·사실성 검토 → 결과 저장** 절차를 사용합니다. 이는 Hermes 작업 절차이며, 기존 Python 일괄 실행에 회사 사이트 분석과 원본 이력서 편집이 자동 연결된 것은 아닙니다.
