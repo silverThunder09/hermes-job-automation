@@ -20,8 +20,9 @@
 |---|---|---|
 | [0001](0001-local-sqlite-baseline.md) | Historical | 초기 SQLite 사용 사실과 로컬 실행에서의 장단점 |
 | [0002](0002-shared-supabase-state.md) | Superseded | Supabase 도입/SQLite 공존의 이력. 공존 정책은 0005가 대체 |
-| [0003](0003-scheduled-collection-and-retention.md) | Proposed | 새벽 배치 실행과 임시 파일 보존: 세부 조건 확정 전 |
+| [0003](0003-scheduled-collection-and-retention.md) | Proposed | 보존·삭제·운영 세부 미결정. 실행 호스트/시각 경계는 0006 후속 결정 |
 | [0004](0004-quality-gates-and-approvals.md) | Proposed | Git 훅·이슈 대응·승인 경계: 구현/활성화 전 결정 필요 |
 | [0005](0005-supabase-postgres-only.md) | Accepted | Supabase PostgreSQL 단일 저장소로 통일, 앱/테스트의 SQLite 제거 |
+| [0006](0006-actions-batch-boundary.md) | Accepted — 실행·격리 경계만 | 04시 Asia/Seoul GitHub 배치, 공개 개발/비공개 운영 분리. 인증 세부·자원 생성·가동은 별도 |
 
 초기 Python/Hermes/문서 출력/OCR 선택도 사전 ADR은 없었습니다. 기존 기술이 이미 최적이라고 간주하지 않으며, 해당 선택을 바꾸거나 중요 의존성을 추가할 때 대안 비교와 승인 절차를 적용합니다. 실제 의존성 목록은 `pyproject.toml`, 실행 여부는 코드·검증 기록을 확인합니다.
