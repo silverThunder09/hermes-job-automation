@@ -16,6 +16,7 @@ HARNESS = (
     "docs/adr/0006-actions-batch-boundary.md", "docs/adr/README.md",
     "docs/adr/0003-scheduled-collection-and-retention.md", "README.md",
     "docs/OPERATIONS.md", "docs/CLOUD_DEVELOPMENT.md",
+    "docs/adr/0007-remote-model-auth.md", "docs/REMOTE_AUTH_DESIGN.md",
 )
 LINK = re.compile(r"\[[^\]]+\]\(([^\s)]+)\)")
 
@@ -61,6 +62,8 @@ def test_root_is_smaller_than_original_and_keeps_task_scoped_loading():
     ("Runtime", "../HERMES_OFFICIAL_RESEARCH.md"),
     ("Runtime", "../adr/0003-scheduled-collection-and-retention.md"),
     ("Runtime", "../adr/0006-actions-batch-boundary.md"),
+    ("Runtime", "../adr/0007-remote-model-auth.md"),
+    ("Runtime", "../REMOTE_AUTH_DESIGN.md#credential-lifecycle"),
     ("Product", "../PRODUCT_SCOPE.md"),
 ])
 def test_feature_route_has_the_required_local_entry(heading, target):

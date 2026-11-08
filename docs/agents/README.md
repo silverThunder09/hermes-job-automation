@@ -38,7 +38,7 @@
 |---|---|---|
 | 인증 없는 Chromium 진단·CI 실패 | [runtime-check 계약](../../README.md#오프라인-브라우저-실행-진단) | `runtime_check.py`, `tests/test_runtime_check.py`, `.github/workflows/ci.yml`. 운영 설정/모델 인증 문서 로드 불필요 |
 | 설치·Codespaces·OS/폰트 경계 | [개발/클라우드 실행 경계](../CLOUD_DEVELOPMENT.md) | 패키지/테스트 명령은 [개발 진입점](development.md). 개발환경은 운영 배포가 아님 |
-| GPT 모델·구독·인증 연결 조사 | [기존 공식 조사](../HERMES_OFFICIAL_RESEARCH.md) | 역사적 조사이므로 [최신 Hermes 공식 문서](https://hermes-agent.nousresearch.com/docs/integrations/providers)와 실제 호출 코드를 대조. Hermes 모델 경로·Python API·향후 원격 인증을 분리 |
+| GPT 모델·구독·인증 연결 조사 | [원격 인증 제안 ADR-0007](../adr/0007-remote-model-auth.md) | 보관·갱신/실패/권한은 [상세 계약](../REMOTE_AUTH_DESIGN.md#credential-lifecycle), 합성 검증은 같은 문서의 모형 절. **Proposed·운영 미구현**이며 기술 선택 후 구현. [기존 공식 조사](../HERMES_OFFICIAL_RESEARCH.md)는 역사적 근거, [최신 Hermes 문서](https://hermes-agent.nousresearch.com/docs/integrations/providers)·실제 호출 코드와 대조하고 Hermes/Python API/standalone Codex를 분리 |
 | PC-off 예약·인증 보존·임시파일 정리 | [04시 Actions 배치·공개/비공개 경계 ADR-0006](../adr/0006-actions-batch-boundary.md) | 호스트·시각·격리만 확정. [보존/삭제 제안 ADR-0003](../adr/0003-scheduled-collection-and-retention.md)은 여전히 Proposed. [운영 안내](../OPERATIONS.md#예약과-재부팅)·[클라우드 경계](../CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 필요한 경우만 읽고 미결정 인증/자료/비용·가동 승인 관문 유지 |
 
 ## Product
