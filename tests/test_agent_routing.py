@@ -13,6 +13,9 @@ HARNESS = (
     "AGENTS.md", "docs/agents/README.md", "docs/agents/development.md",
     "docs/agents/issue-tracker.md", "CONTRIBUTING.md", "docs/PR_AUTOMATION.md",
     "docs/WORKFLOW_POLICY.md", "skills/job-tailoring/SKILL.md",
+    "docs/adr/0006-actions-batch-boundary.md", "docs/adr/README.md",
+    "docs/adr/0003-scheduled-collection-and-retention.md", "README.md",
+    "docs/OPERATIONS.md", "docs/CLOUD_DEVELOPMENT.md",
 )
 LINK = re.compile(r"\[[^\]]+\]\(([^\s)]+)\)")
 
@@ -57,6 +60,7 @@ def test_root_is_smaller_than_original_and_keeps_task_scoped_loading():
     ("Runtime", "../../README.md#오프라인-브라우저-실행-진단"),
     ("Runtime", "../HERMES_OFFICIAL_RESEARCH.md"),
     ("Runtime", "../adr/0003-scheduled-collection-and-retention.md"),
+    ("Runtime", "../adr/0006-actions-batch-boundary.md"),
     ("Product", "../PRODUCT_SCOPE.md"),
 ])
 def test_feature_route_has_the_required_local_entry(heading, target):

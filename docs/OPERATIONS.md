@@ -29,7 +29,7 @@
 
 Windows 작업은 사용자 로그인이 되어 있고 PC가 켜져 있을 때만 실행됩니다. 꺼진 시간의 작업은 Windows가 다음 로그인 후 처리합니다. Hermes Gateway도 Windows 사용자 세션과 브라우저·모델 로그인 상태를 점검해야 합니다.
 
-PC 전원이 꺼져도 매일 04:00 실행하려면 Hermes Cloud 인스턴스 또는 직접 관리하는 상시 호스트가 필요합니다. Cloud는 별도 VPS 구매 없이 사용할 수 있지만 계정 권한·인스턴스·비용·인증 확인이 필요합니다. 코드의 GitHub 업로드와 `.devcontainer` 개발 설정은 운영 배포가 아니며, 현재 유료 Cloud/VPS 생성·Gateway/Cron 가동은 수행하지 않았습니다. `CLOUD_DEVELOPMENT.md`를 참고하세요.
+PC-off 운영은 [ADR-0006](adr/0006-actions-batch-boundary.md)에 따라 **매일 04:00 `Asia/Seoul`의 GitHub-hosted 일회성 배치**, 공개 개발 CI와 비공개 민감 운영의 분리로 결정했습니다. 별도 상시 Cloud/VPS/Gateway는 필수가 아닙니다. 위 Windows/Gateway 절차는 선택적 로컬 경로입니다. 새 운영 저장소·인증 보관/갱신·비용 차단·자료 처리의 세부 결정과 수동 원격 검증 후 별도 예약 가동 승인이 필요합니다. 현재 운영 workflow/인증/예약은 미구현·미가동이며 정각 시작도 보장하지 않습니다. [클라우드 실행 경계](CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 참고하세요.
 
 ## 로그와 개인정보
 

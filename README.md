@@ -32,7 +32,7 @@ GitHub 저장소의 **Code → Codespaces → Create codespace on main** 또는 
 
 개인 이력서·포트폴리오·생성 결과·프로필·자격 증명은 저장소에 포함하지 않습니다. `profile.example.json`은 빈 템플릿입니다. 실제 프로필은 무시되는 `profile.json`에 보관합니다.
 
-**Hermes Cloud를 쓰면 별도 VPS를 직접 마련할 필요는 없습니다.** 다만 Nous Portal의 Cloud 접근권한·인스턴스·모델 인증·비용 확인이 필요하며, Codespaces 개발환경과 상시 자동화 운영은 별개입니다. Windows 전용 OCR의 Linux 대체 경로 등 남은 제한은 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
+PC-off 운영 방향은 [GitHub Actions 일회성 배치·공개 개발/비공개 운영 분리](docs/adr/0006-actions-batch-boundary.md)로 결정했습니다. 별도 상시 Hermes Cloud/VPS를 필수로 두지 않습니다. 아래 클라우드 개발환경과 Cloud 설치 예시는 선택적 대안이며 운영 인증·예약이 가동됐다는 뜻은 아닙니다. OS/OCR 등 남은 제한은 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
 
 ## 설치
 
@@ -86,11 +86,13 @@ GitHub 스킬 조사와 출처는 `docs/OCR_SKILL_RESEARCH.md`에 있습니다. 
 
 ## 예약 실행
 
-로그인한 Windows 세션에서 매일 04:00 KST 실행하도록 예약하려면:
+**선택한 운영 방향은 매일 04:00 `Asia/Seoul`의 GitHub-hosted 배치**입니다. 현재 공개 저장소는 비밀 없는 개발 CI를 유지하며, 민감 운영은 별도 비공개 영역으로 분리합니다. [ADR-0006](docs/adr/0006-actions-batch-boundary.md)의 결정 범위와 미승인 인증/가동 관문을 먼저 확인하세요. 실제 운영 workflow·인증·예약은 아직 구현/등록하지 않았습니다. GitHub 예약은 지연·누락될 수 있어 정각 시작을 보장하지 않습니다.
+
+다음은 **선택적 로컬 실행 예시**입니다. PC-off 운영 경로가 아니며 예약 등록은 별도 승인 대상입니다. 로그인한 Windows 세션에서 매일 04:00 KST 실행하도록 등록하는 기존 스크립트:
 
     .\scripts\register_task.ps1
 
-Windows가 꺼져 있을 때는 작업이 실행되지 않습니다. PC가 꺼져 있어도 정기 실행하려면 Hermes Cloud 같은 호스팅 인스턴스 또는 직접 운영하는 상시 가동 호스트가 필요합니다. 현재 저장소는 클라우드 개발 설정을 포함하지만 상시 운영 배포나 예약 실행을 완료한 것은 아닙니다. `docs/CLOUD_DEVELOPMENT.md`와 `docs/OPERATIONS.md`를 참고하세요.
+Windows가 꺼져 있으면 위 로컬 작업은 실행되지 않습니다. 이 한계를 GitHub 배치로 분리하는 것이 선택한 방향이며 상시 호스트 구매가 필수인 것은 아닙니다. GitHub 개발 CI 성공과 실제 원격 배치·인증·예약 가동은 별개입니다. [실행 경계](docs/CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)와 [운영 안내](docs/OPERATIONS.md#예약과-재부팅)를 참고하세요.
 
 예약을 해제하려면 .\scripts\unregister_task.ps1을 실행합니다. Hermes Gateway 작업은 사용자가 로그인한 뒤 실행되며, 모델 인증이 완료되어야 매일 평가와 초안을 만들 수 있습니다.
 
