@@ -9,7 +9,7 @@ from .eligibility import check_eligibility
 from .models import Evaluation, Posting
 from .notifications import send_telegram
 from .scoring import validate_evaluation
-from .state import StateStore
+from .state import create_state_store
 from .workspace import GoogleWorkspace
 
 
@@ -18,7 +18,7 @@ def finalize_review(settings: Settings, review_file: Path, execute: bool = False
     entries = payload.get("evaluations", [])
     if not isinstance(entries, list):
         raise ValueError("evaluations must be a JSON array.")
-    store = StateStore(settings.data_dir / "state.sqlite3")
+    store = create_state_store(settings)
     profile_path = settings.project_root / "profile.json"
     if not profile_path.exists():
         profile_path = settings.project_root / "profile.example.json"
@@ -30,7 +30,7 @@ def finalize_review(settings: Settings, review_file: Path, execute: bool = False
         key = str(entry.get("posting_key", ""))
         raw_posting = store.get_posting(key)
         if not raw_posting:
-            held.append({"posting_key": key, "reason": "posting_not_in_local_database"})
+            held.append({"posting_key": key, "reason": "posting_not_in_state_store"})
             continue
         posting = Posting.from_dict(raw_posting)
         eligibility = check_eligibility(posting)

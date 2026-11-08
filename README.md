@@ -8,7 +8,7 @@
 
 이 프로젝트는 [셀프호스팅형 에이전트 채용 자동화 도구](docs/PRODUCT_SCOPE.md)를 지향합니다. 공통 Python 도구와 에이전트별 스킬/연결 설정을 제공하고, PC가 꺼진 동안에는 별도 원격 실행 환경이 작업하도록 설계합니다. 웹서비스나 다중 사용자 SaaS가 필수인 것은 아닙니다.
 
-현재 여러 사이트의 브라우저 수집부터 회사 조사·맞춤 문서·무인 자동지원까지 전체 흐름이 완성된 것은 아닙니다. 아래 실행 설명은 이 브랜치의 기존 구현 기준입니다. Supabase 단일화 구현은 별도 작업 브랜치이며 이번 문서·규칙 변경에는 그 소스 코드를 포함하지 않습니다. ADR의 개인환경 검증 기록을 이 브랜치/main의 배포 완료로 해석하지 않습니다.
+현재 여러 사이트의 브라우저 수집부터 회사 조사·맞춤 문서·무인 자동지원까지 전체 흐름이 완성된 것은 아닙니다. 앱 상태 저장은 ADR-0005에 따라 Supabase PostgreSQL로 단일화했습니다. 로컬 HTTP 계약·격리 PostgreSQL 테스트와 실제 Supabase 배포/설정 검증은 별개이며, ADR의 과거 개인환경 검증 기록을 현재 체크아웃의 배포 완료로 해석하지 않습니다.
 
 공고 수집·조건 판별·평가·문서 초안·기록/알림을 단계적으로 조율합니다. 실제 지원은 기본적으로 꺼져 있으며, 현재 자동 수집 구현은 승인된 공식 API 경로입니다. 브라우저 기반 수집은 목표와 구현/검증 상태를 구분합니다.
 
@@ -38,7 +38,7 @@ PowerShell에서 프로젝트 폴더로 이동한 뒤 실행합니다.
 
     .\scripts\install_windows.ps1
 
-이 스크립트는 가상환경과 브라우저를 프로젝트 옆 work 폴더에 둡니다. 패키지를 설치한 뒤 .env.example을 .env로 복사하고 필요한 연결값을 채웁니다. 실사용 자격 증명은 Git이나 공유 폴더에 저장하지 마세요.
+이 스크립트는 가상환경과 브라우저를 프로젝트 옆 work 폴더에 둡니다. 패키지를 설치한 뒤 `.env`가 없을 때만 `.env.example`을 복사하고 필요한 연결값을 로컬에서 채웁니다. 기존 `.env`는 덮어쓰지 마세요. 실사용 자격 증명은 Git이나 공유 폴더에 저장하지 마세요. Supabase 스키마 설치와 상태 연결은 [설정 안내](docs/SUPABASE_STATE.md)를 따릅니다.
 
 ## 로컬 확인
 
@@ -81,6 +81,8 @@ Hermes Gateway가 상시 실행되는 서버에서는 hermes/cron-job.txt의 Cro
 
 ## 계정 연결
 
+상태 저장은 **Supabase PostgreSQL만** 사용합니다([ADR-0005](docs/adr/0005-supabase-postgres-only.md)). `JOB_ASSIST_STATE_BACKEND` 기본값은 `supabase`이며 `sqlite`나 잘못된 값은 오류로 거부합니다. Supabase 설정이 없거나 연결이 실패하면 저장을 중단하며 로컬 DB로 우회하지 않습니다. 환경 변수, read-only `state-health`, 별도 승인된 공개 샘플 `state-smoke --explicit-write`와 정확한 read-back 절차는 [Supabase 상태 저장소 안내](docs/SUPABASE_STATE.md)를 참고하세요. 기존 SQLite 파일은 보관용으로 남기며 앱은 읽거나 쓰지 않습니다. 자동 복사·이관·삭제는 하지 않습니다. 로컬 PostgreSQL 컨테이너는 SQL 테스트 전용이며 별도 운영 DB가 아닙니다. `run`/`finalize`는 `--execute` 없이도 상태 DB에 쓰며 오프라인 미리보기 명령이 아닙니다.
+
 - Google Sheets/Drive: OAuth 데스크톱 클라이언트 또는 공유된 서비스 계정
 - GPT: Hermes의 ChatGPT/Codex 구독 연결을 우선 사용하거나, OpenAI API key와 model 지정
 - Telegram: bot token과 본인 chat ID
@@ -94,4 +96,4 @@ Hermes Gateway가 상시 실행되는 서버에서는 hermes/cron-job.txt의 Cro
 
 & "$RuntimeRoot\.venv\Scripts\python.exe" -m hermes_job_automation.cli form-dry-run
 
-실제 사이트 제출은 조건별 사용자 승인 레코드, AUTO_SUBMIT=true, FORM_AUTOFILL_ENABLED=true가 모두 있어야 시도할 수 있습니다. 제출 직전 SQLite에 시도 ID가 기록되고, 접수 번호나 완료 화면이 확인되지 않으면 결과를 성공으로 표시하지 않습니다. 진행 중이거나 결과가 불명확한 신청은 재시도하지 않고 수동 확인 상태로 남깁니다.
+실제 사이트 제출은 조건별 사용자 승인 레코드, AUTO_SUBMIT=true, FORM_AUTOFILL_ENABLED=true가 모두 있어야 시도할 수 있습니다. 제출 직전 Supabase 상태 저장소에 원자적 claim과 시도 ID가 기록되고, 접수 번호나 완료 화면이 확인되지 않으면 결과를 성공으로 표시하지 않습니다. 진행 중이거나 결과가 불명확한 신청은 재시도하지 않고 수동 확인 상태로 남깁니다.

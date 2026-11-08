@@ -15,7 +15,7 @@ from .manual_import import load_manual_postings
 from .models import Evaluation, Posting
 from .notifications import send_telegram
 from .scoring import OpenAIScorer
-from .state import StateStore, posting_key
+from .state import create_state_store, posting_key
 from .workspace import GoogleWorkspace
 from .writing import OpenAIWriter
 
@@ -82,7 +82,7 @@ def run_pipeline(
     log = logging.getLogger("job_assistant")
     lock_path = settings.data_dir / "run.lock"
     with ProcessLock(lock_path):
-        store = StateStore(settings.data_dir / "state.sqlite3")
+        store = create_state_store(settings)
         run_id = str(uuid.uuid4())
         started = _now(settings)
         store.create_run(run_id, started.isoformat())
@@ -291,8 +291,9 @@ def get_health(settings: Settings) -> Dict[str, Any]:
     import os
     import shutil
 
-    settings.ensure_directories()
-    StateStore(settings.data_dir / "state.sqlite3")
+    from .state_checks import state_health
+
+    state_status = state_health(settings)
     hermes = shutil.which("hermes")
     if not hermes:
         candidates = []
@@ -314,6 +315,6 @@ def get_health(settings: Settings) -> Dict[str, Any]:
         "hermes": hermes or "not_found",
         "playwright": bool(importlib.util.find_spec("playwright")),
         "configuration": settings.public_status(),
-        "sqlite": "ready",
+        "state": state_status,
         "next_run_schedule": "매일 04:00 Asia/Seoul (Windows Task Scheduler 또는 Hermes Gateway 필요)",
     }

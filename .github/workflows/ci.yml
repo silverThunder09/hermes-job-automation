@@ -40,3 +40,55 @@ jobs:
         run: python -m compileall -q src
       - name: Test local fixtures only
         run: python -m pytest -o addopts='' -q
+
+  sql-invariants:
+    name: SQL invariants (PostgreSQL 16)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: '1'
+      AUTO_SUBMIT: 'false'
+      FORM_AUTOFILL_ENABLED: 'false'
+      SARAMIN_API_APPROVED: 'false'
+      DOCKER_CONTEXT: default
+      DOCKER_HOST: unix:///var/run/docker.sock
+      JOB_ASSIST_TEST_POSTGRES_CONTAINER: job-assist-sql-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install package
+        run: python -m pip install -e '.[dev]'
+      - name: Start isolated test-only PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          endpoint="$(docker context inspect --format '{{.Endpoints.docker.Host}}')"
+          case "$endpoint" in
+            unix:*) ;;
+            *) echo 'Refusing a non-local Docker endpoint'; exit 1 ;;
+          esac
+          docker pull postgres:16
+          docker run --pull=never --network none \
+            --name "$JOB_ASSIST_TEST_POSTGRES_CONTAINER" \
+            -e POSTGRES_HOST_AUTH_METHOD=trust -d postgres:16
+          for attempt in {1..30}; do
+            if docker exec "$JOB_ASSIST_TEST_POSTGRES_CONTAINER" pg_isready -U postgres; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo 'Test PostgreSQL did not become ready'
+          exit 1
+      - name: Test real SQL invariants
+        run: python -m pytest -o addopts='' -q tests/test_supabase_schema.py
+      - name: Stop test-only PostgreSQL
+        if: always()
+        shell: bash
+        run: |
+          if docker inspect "$JOB_ASSIST_TEST_POSTGRES_CONTAINER" >/dev/null 2>&1; then
+            docker stop "$JOB_ASSIST_TEST_POSTGRES_CONTAINER"
+          fi
