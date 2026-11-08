@@ -7,6 +7,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 
 이 스킬은 Hermes가 도구로 수행하는 절차다. Python의 기존 일괄 평가 파이프라인에 회사 사이트 분석·원본 이력서 편집이 자동 연결되었다는 뜻은 아니다. 실제 제출과 외부 업로드는 이 작업에 포함하지 않는다.
 
+<a id="input-safety"></a>
 ## 시작 조건
 
 - 사용자에게 받은 공고 URL·공고 캡처/PDF와 원본 이력서를 확인한다. 첨부 파일은 로컬 경로로 읽을 수 있다.
@@ -14,6 +15,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 - 원본을 덮어쓰지 않는다. 원본 경로와 SHA-256을 기록하고 작업 후 해시가 동일한지 확인한다.
 - docs/PLATFORM_ACCESS.md를 따른다. 지정 URL을 사용자가 제공했다는 이유만으로 사이트 전체의 자동 반복 수집까지 허가된 것으로 간주하지 않는다.
 
+<a id="posting-analysis"></a>
 ## 1. 공고 분석: DOM 텍스트 + 이미지
 
 1. 실제 브라우저로 지정 공고를 연다. 페이지 URL, 확인 시각, 접수 상태를 기록한다. 로그인·추가 인증·접근 제한은 우회하지 않는다.
@@ -24,6 +26,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 6. 긴 이미지는 OCR 최대 크기 오류가 발생할 수 있다. 원본을 보존하고 겹침 영역을 둔 조각으로 분리한 뒤 조각 좌표를 기록한다. 축소로 작은 한글이 사라지거나 하단이 잘린 결과를 전체 추출이라고 보고하지 않는다.
 7. 연결 실패 시 바로 사용자에게 캡처를 요구하지 않는다. 먼저 원본 공고 ID를 보존한 채 검색어를 바꿔 검색하고, 검색 결과의 동일 ID 공개 페이지와 회사 공식 채용 페이지를 찾는다. 한 URL/브라우저 도구의 실패와 공고 자체의 접근 불가를 구분하며 공개 HTML·검색·정식 대체 페이지를 교차 확인한다. 공고 ID나 URL 검색어만으로 회사와 요건을 추측하거나 다른 공고의 경력·학력을 합치지 않는다. 이 경로들도 실패했을 때만 `blocked`/`review`를 기록하고 전체 캡처/PDF를 요청한다. OCR 모호함도 원본과 대조되지 않으면 확인 필요로 남긴다.
 
+<a id="company-analysis"></a>
 ## 2. 회사 공식 사이트 분석
 
 - 공고에 링크된 공식 도메인을 우선한다. 없으면 회사명·사업내용·소재지 등을 대조해 동일 법인의 공식 사이트인지 확인한다.
@@ -37,6 +40,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 - 기존 eligibility.py는 고정 문자열 필터라 우대·부정문을 오판할 수 있다. 원문과 프로그램 판정이 다르면 충돌을 기록하고 사람 확인을 요청한다. 조용히 판정을 우회하지 않는다.
 - 이 단계는 낭비를 막는 사전 확인이며, 최종 적합도·문서 품질 평가는 수정 이후 별도로 한다.
 
+<a id="resume-edit"></a>
 ## 4. 이력서 수정
 
 - 원본 이력서/포트폴리오의 사실과 페이지를 근거 목록으로 만든다. 링크가 달려 있어도 실제로 열어 검증하기 전에는 '문서 기재 사실'과 '독립 검증 사실'을 구분한다.
@@ -47,6 +51,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 - 포트폴리오만으로 신규 이력서를 만들 때 누락된 학력·근무 이력은 '확인 필요'로 남긴다. 최종 제출본으로 표시하지 않는다.
 - 변경마다 원문, 수정문, 이유, 공고 근거, 지원자 근거를 남긴다.
 
+<a id="document-review"></a>
 ## 5. 수정 후 판단
 
 가능하면 수정 단계와 분리된 검토 패스로 확인한다. 같은 모델의 재검토를 독립적인 사실 검증으로 과장하지 않는다.
@@ -69,6 +74,7 @@ description: Use for a supplied job URL and attached resume or portfolio. Analyz
 
 공고를 읽지 못했으면 `blocked`/`needs_information` 결과만 남기고 회사별 수정본을 만들어낸 것으로 보고하지 않는다. 기존 finalize는 별도 스키마와 DB 공고 등록을 요구하므로 이 폴더를 그대로 finalize 입력으로 전달하지 않는다.
 
+<a id="local-ocr"></a>
 ## 로컬 OCR 실행
 
 프로젝트 루트의 PowerShell 예:

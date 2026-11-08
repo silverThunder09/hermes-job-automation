@@ -2,6 +2,8 @@
 
 ## 개발 규칙
 
+에이전트 문서 탐색은 [AGENTS.md](AGENTS.md)에서 시작합니다. 작업별 후속 문서는 [기능 색인](docs/agents/README.md), 코드·문서·CI/PR 변경은 [개발 진입점](docs/agents/development.md)으로 연결되며 관련 경로만 읽습니다.
+
 작업 흐름은 [CONTRIBUTING.md](CONTRIBUTING.md), 코드·브랜치·커밋 규칙은 [개발 컨벤션](docs/CONVENTIONS.md), 기술 선택 근거는 [ADR](docs/adr/README.md)을 따릅니다. 새 기술·인프라·보안/보존 정책은 구현 전 ADR로 비교하며, 결정 승인과 실제 배포/검증을 구분합니다.
 
 ## 제품 방향과 구현 범위
