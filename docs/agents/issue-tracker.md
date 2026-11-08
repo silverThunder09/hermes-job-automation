@@ -7,12 +7,12 @@
 기존 인증된 `gh`를 사용하며 자격 증명 값/파일을 추출하지 않습니다.
 
 ```text
-gh issue view <번호> --repo silverThunder09/hermes-job-automation --comments
+gh issue view <번호> --repo silverThunder09/hermes-job-automation --json title,body,comments
 gh issue list --repo silverThunder09/hermes-job-automation --state all --search <문제>
 gh pr list --repo silverThunder09/hermes-job-automation --state open --search <문제>
 ```
 
-본문과 최신 댓글을 함께 읽고 문제·범위/제외·완료 기준·실제 승인 범위를 확인합니다. 연결 spec을 찾지 못했으면 추정하지 말고 질문합니다. 중복 이슈가 있으면 갱신하고 새로운 결함이면 원래 이슈/PR에 연결합니다.
+JSON의 본문과 최신 댓글을 함께 읽고 문제·범위/제외·완료 기준·실제 승인 범위를 확인합니다. `--comments`만 사용하면 댓글 없는 이슈의 본문을 확보하지 못할 수 있으므로 위 명시적 필드를 사용합니다. 연결 spec을 찾지 못했으면 추정하지 말고 질문합니다. 중복 이슈가 있으면 갱신하고 새로운 결함이면 원래 이슈/PR에 연결합니다.
 
 ## 쓰기·종료
 

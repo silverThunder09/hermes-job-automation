@@ -7,14 +7,14 @@
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | 공고 내용·접수 상태·URL 실패 복구 | [공고 분석](../../skills/job-tailoring/SKILL.md#posting-analysis) | 실제 사이트 접근 전 Access 섹션 |
-| 회사 공식 홈페이지 분석만 | [회사 분석](../../skills/job-tailoring/SKILL.md#company-analysis) | 회사 정보와 지원자 경험을 구분. 이력서 수정까지 요청한 경우에만 Documents 섹션 |
+| 회사 공식 홈페이지 분석만 | [회사 분석](../../skills/job-tailoring/SKILL.md#company-analysis) | 채용 플랫폼 페이지를 경유하면 [Access](#access)를 먼저 확인. 회사 정보와 지원자 경험을 구분. 이력서 수정까지 요청한 경우에만 Documents 섹션 |
 
 ## Documents
 
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | 원본 근거 정리·이력서 편집 | [원본 보존·입력 확인](../../skills/job-tailoring/SKILL.md#input-safety) → [이력서 수정](../../skills/job-tailoring/SKILL.md#resume-edit) | [수정 후 검토·저장](../../skills/job-tailoring/SKILL.md#document-review) |
-| 이미지 OCR·PDF 텍스트 추출 | [로컬 OCR](../../skills/job-tailoring/SKILL.md#local-ocr) | 엔진 비교/변경 때만 [OCR 조사](../OCR_SKILL_RESEARCH.md). 원격 OS 지원은 Runtime 섹션 |
+| 이미지 OCR·PDF 텍스트 추출 | [원본 보존](../../skills/job-tailoring/SKILL.md#input-safety) → [OCR 사실 검증](../../skills/job-tailoring/SKILL.md#ocr-evidence) → [로컬 OCR](../../skills/job-tailoring/SKILL.md#local-ocr) | 엔진 비교/변경 때만 [OCR 조사](../OCR_SKILL_RESEARCH.md). 원격 OS 지원은 Runtime 섹션 |
 | DOCX/PDF 생성 코드 수정 | [개발 진입점](development.md) → `documents.py`, `tests/test_documents.py` | 설치 폰트/OS 문제일 때만 [클라우드 문서 출력 경계](../CLOUD_DEVELOPMENT.md#4-현재-기능의-클라우드-경계) |
 
 ## Access
