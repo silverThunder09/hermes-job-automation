@@ -316,5 +316,6 @@ def get_health(settings: Settings) -> Dict[str, Any]:
         "playwright": bool(importlib.util.find_spec("playwright")),
         "configuration": settings.public_status(),
         "state": state_status,
-        "next_run_schedule": "매일 04:00 Asia/Seoul (Windows Task Scheduler 또는 Hermes Gateway 필요)",
+        "next_run_schedule": None,
+        "schedule_status": "not_verified",
     }

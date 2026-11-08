@@ -66,6 +66,7 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="job-assist")
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("health")
+    commands.add_parser("runtime-check", help="Verify built-in synthetic HTML in offline headless Chromium.")
     commands.add_parser("state-health", help="Read-only Supabase schema and private-bucket check.")
     smoke = commands.add_parser("state-smoke", help="Retain a unique public storage sample; never upload or submit.")
     smoke.add_argument("--explicit-write", action="store_true", help="Explicitly authorize retaining a new storage sample.")
@@ -94,6 +95,13 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if args.command == "state-smoke" and not args.explicit_write:
         parser.error("state-smoke requires --explicit-write; the public sample will be retained, not deleted.")
+
+    if args.command == "runtime-check":
+        from .runtime_check import run_runtime_check
+
+        result = run_runtime_check()
+        _print(result)
+        return 0 if result["status"] == "verified" else 1
 
     try:
         settings = Settings.load()
