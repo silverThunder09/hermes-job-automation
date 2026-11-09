@@ -5,6 +5,7 @@
 - [ADR-0005](adr/0005-supabase-postgres-only.md)에 따라 **Supabase PostgreSQL만** 앱 상태 저장소로 사용합니다. 미지정 backend의 기본값은 `supabase`이며 `sqlite`/알 수 없는 값은 명확히 거부합니다.
 - 기존 SQLite DB와 원본 지원서/문서는 보존합니다. 앱은 이전 DB 파일을 읽거나 쓰거나 만들지 않으며 자동 복사·이관·삭제하지 않습니다. 로컬 PostgreSQL은 SQL 테스트 전용이고 운영 대체 backend가 아닙니다.
 - Supabase는 공고/적격성 JSONB, 평가 JSONB, 지원 상태/메모, 실행 기록만 저장합니다. Storage 업로드, 실제 지원, 스케줄링 기능을 켜지 않습니다.
+- 이 문서의 업무 상태 저장은 GPT 로그인 보관을 포함하지 않습니다. Vault 재사용은 [인증 전용 접근 경계](SUPABASE_AUTH_DESIGN.md#access-boundary)의 **Proposed·운영 미구현** 후보이며 현재 서버 키/RPC로 자동 연결하지 않습니다.
 - 코드/로컬 테스트와 **운영 Supabase 검증은 별개**입니다. 로컬 HTTP fixture 성공은 live 성공이 아닙니다. 신규 환경은 아래 SQL Editor 설치가 필요하며, 이미 적용한 환경은 불필요하게 재배포하지 않고 실제 설정으로 health/smoke를 검증합니다. 이 문서는 실시간 검증 결과나 자격 증명을 담지 않습니다.
 - `SUPABASE_SECRET_KEY`는 서버 Data/Storage API 인증용입니다. **테이블 생성 권한을 가진 SQL 연결이나 Management API 토큰이 아니므로 이 키로 DDL을 실행하지 않습니다.**
 - `AUTO_SUBMIT` / `FORM_AUTOFILL_ENABLED` / 별도 지원 승인 경계는 그대로입니다. 상태를 저장했다고 지원이 승인되거나 제출되지 않습니다.
