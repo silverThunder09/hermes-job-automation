@@ -17,6 +17,8 @@ HARNESS = (
     "docs/adr/0003-scheduled-collection-and-retention.md", "README.md",
     "docs/OPERATIONS.md", "docs/CLOUD_DEVELOPMENT.md",
     "docs/adr/0007-remote-model-auth.md", "docs/REMOTE_AUTH_DESIGN.md",
+    "docs/adr/0008-supabase-auth-reuse.md", "docs/SUPABASE_AUTH_DESIGN.md",
+    "docs/SUPABASE_STATE.md",
 )
 LINK = re.compile(r"\[[^\]]+\]\(([^\s)]+)\)")
 
@@ -58,12 +60,15 @@ def test_root_is_smaller_than_original_and_keeps_task_scoped_loading():
     ("Access", "../OPERATIONS.md#제출-승인"),
     ("Storage", "../SUPABASE_STATE.md"),
     ("Storage", "../GOOGLE_WORKSPACE_SETUP.md"),
+    ("Storage", "../SUPABASE_AUTH_DESIGN.md#access-boundary"),
     ("Runtime", "../../README.md#오프라인-브라우저-실행-진단"),
     ("Runtime", "../HERMES_OFFICIAL_RESEARCH.md"),
     ("Runtime", "../adr/0003-scheduled-collection-and-retention.md"),
     ("Runtime", "../adr/0006-actions-batch-boundary.md"),
     ("Runtime", "../adr/0007-remote-model-auth.md"),
     ("Runtime", "../REMOTE_AUTH_DESIGN.md#credential-lifecycle"),
+    ("Runtime", "../adr/0008-supabase-auth-reuse.md"),
+    ("Runtime", "../SUPABASE_AUTH_DESIGN.md#credential-lifecycle"),
     ("Product", "../PRODUCT_SCOPE.md"),
 ])
 def test_feature_route_has_the_required_local_entry(heading, target):
@@ -173,3 +178,19 @@ def test_company_research_requires_access_route_when_using_platform_pages():
     research = section(INDEX.read_text(encoding="utf-8"), "Research")
     row = next(line for line in research.splitlines() if line.startswith("| 회사 공식"))
     assert "#access" in LINK.findall(row)
+
+
+def test_auth_routes_prefer_reuse_and_preserve_unapproved_alternative_history():
+    runtime = section(INDEX.read_text(encoding="utf-8"), "Runtime")
+    row = next(line for line in runtime.splitlines() if line.startswith("| GPT 모델"))
+    assert LINK.findall(row)[0] == "../adr/0008-supabase-auth-reuse.md"
+    for name in ("0007-remote-model-auth.md", "0008-supabase-auth-reuse.md"):
+        path = ROOT / "docs/adr" / name
+        assert path.is_file(), "Missing authentication proposal"
+        header = path.read_text(encoding="utf-8").split("## ", 1)[0]
+        assert "Proposed" in header
+        assert "Accepted" not in header and "Superseded" not in header
+    for name in ("docs/adr/0007-remote-model-auth.md", "docs/REMOTE_AUTH_DESIGN.md"):
+        path = ROOT / name
+        header = path.read_text(encoding="utf-8").split("## ", 1)[0]
+        assert any("0008-supabase-auth-reuse.md" in link for link in LINK.findall(header))

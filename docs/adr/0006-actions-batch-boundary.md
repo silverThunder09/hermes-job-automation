@@ -60,7 +60,7 @@ GitHub 공식 문서는 timezone을 생략하면 UTC가 기본이며 IANA 시간
 
 위 후보 중 **GitHub Secrets 저장과 fine-grained PAT/App writer 중 무엇을 쓸지도 미결정**이다. OpenAI의 Codex 관리 인증 CI 안내는 신뢰하는 비공개 자동화용이며 공개/오픈소스 저장소에 해당 workflow를 쓰지 말라고 명시한다. 또한 그 안내는 Codex 외 generic OAuth 클라이언트에 적용되지 않는다. Hermes 자체 OAuth와 동일한 것으로 취급하지 않는다. 인증 bundle을 매번 오래된 초기 Secret로 복사하는 것만으로 장기 갱신이 검증되지는 않는다.
 
-인증 관문의 후속 비교안은 [ADR-0007](0007-remote-model-auth.md)과 [상세 수명주기 계약](../REMOTE_AUTH_DESIGN.md#credential-lifecycle)에 기록한다. **Proposed이며 기술 선택·운영 생성/가동은 미승인**이다. 이 문서의 실행/격리 결정과 나머지 관문의 상태를 바꾸지 않는다.
+인증 관문의 현재 우선 검토 후보는 [Supabase 재사용 ADR-0008](0008-supabase-auth-reuse.md)과 [상세 계약](../SUPABASE_AUTH_DESIGN.md#credential-lifecycle)이다. [ADR-0007](0007-remote-model-auth.md)의 GitHub 후보는 비교 이력으로 보존한다. **모두 Proposed이며 기술 선택·운영 생성/가동은 미승인**이다. 이 문서의 실행/격리 결정과 나머지 관문의 상태를 바꾸지 않는다.
 
 ## 대안·비용·되돌리는 조건
 

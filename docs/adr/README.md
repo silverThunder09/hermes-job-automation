@@ -24,6 +24,7 @@
 | [0004](0004-quality-gates-and-approvals.md) | Proposed | Git 훅·이슈 대응·승인 경계: 구현/활성화 전 결정 필요 |
 | [0005](0005-supabase-postgres-only.md) | Accepted | Supabase PostgreSQL 단일 저장소로 통일, 앱/테스트의 SQLite 제거 |
 | [0006](0006-actions-batch-boundary.md) | Accepted — 실행·격리 경계만 | 04시 Asia/Seoul GitHub 배치, 공개 개발/비공개 운영 분리. 인증 세부·자원 생성·가동은 별도 |
-| [0007](0007-remote-model-auth.md) | Proposed | Hermes 전용 원격 인증·environment Secret/App writer·갱신 round-trip 제안. 운영 미구현·기술 선택 미승인 |
+| [0007](0007-remote-model-auth.md) | Proposed — 비교 이력 | GitHub environment Secret/App writer 후보의 이유·제약 보존. 현재 추가 비교·우선 후보는 0008, 기술 선택은 미승인 |
+| [0008](0008-supabase-auth-reuse.md) | Proposed | 기존 Supabase Vault 재사용 우선 검토. bootstrap·최소권한 접점·원격 갱신은 미선정/미구현·미승인 |
 
 초기 Python/Hermes/문서 출력/OCR 선택도 사전 ADR은 없었습니다. 기존 기술이 이미 최적이라고 간주하지 않으며, 해당 선택을 바꾸거나 중요 의존성을 추가할 때 대안 비교와 승인 절차를 적용합니다. 실제 의존성 목록은 `pyproject.toml`, 실행 여부는 코드·검증 기록을 확인합니다.

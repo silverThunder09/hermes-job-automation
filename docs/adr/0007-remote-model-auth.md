@@ -1,10 +1,12 @@
 # ADR-0007: 원격 GPT 인증·보관·갱신 제안
 
 - 기록일: 2026-11-09 (Asia/Seoul)
-- 결정 상태: **Proposed — 사용자 기술 선택 전**
+- 결정 상태: **Proposed — GitHub 보관 후보의 비교 이력, 사용자 기술 선택 전**
 - 구현/배포/가동 상태: **운영 미구현·미배포·미가동**. 비밀 없는 메모리 내 프로토콜 모형만 검증한다.
 - 연결 이슈: [#13](https://github.com/silverThunder09/hermes-job-automation/issues/13)
 - 선행 결정: [ADR-0006](0006-actions-batch-boundary.md)의 일회성 GitHub-hosted 배치·04시·공개 개발/비공개 운영 경계를 유지한다. 이 문서는 해당 결정을 대체하지 않는다.
+
+현재 우선 검토 후보와 추가 비교는 [ADR-0008](0008-supabase-auth-reuse.md)이다. 아래 GitHub 후보의 당시 이유·제약은 보존한다. 후속 문서도 Proposed이며 기술 선택·운영 도입은 미승인이다.
 
 ## 배경과 요구사항
 

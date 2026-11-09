@@ -1,6 +1,8 @@
-# 원격 GPT 인증 상세 설계 — Proposed
+# GitHub 보관 기반 GPT 인증 상세 설계 — 비교 이력(Proposed)
 
 > **설계안이며 실행 가이드/활성 workflow가 아니다.** 기술 선택은 [ADR-0007](adr/0007-remote-model-auth.md), 확정된 호스트·시각·격리 경계는 [ADR-0006](adr/0006-actions-batch-boundary.md)가 소유한다. 현재 인증·운영 저장소·App·Secret·예약은 만들지 않았다.
+
+현재 우선 검토 후보는 [Supabase 재사용 ADR-0008](adr/0008-supabase-auth-reuse.md)과 [새 상세 계약](SUPABASE_AUTH_DESIGN.md#credential-lifecycle)이다. 아래는 GitHub 방식의 비교 이력으로 보존하며, 두 방식 모두 Proposed·운영 미구현이다.
 
 ## 1. 계정과 실행 경로
 
@@ -19,6 +21,8 @@
 
 <a id="credential-lifecycle"></a>
 ## 2. 인증 수명주기 계약
+
+이 절은 **이전 GitHub 후보의 이력**이다. 현재 우선 검토 계약은 [Supabase 경로](SUPABASE_AUTH_DESIGN.md#credential-lifecycle)이며 아래 절차를 함께 가동하는 것이 아니다.
 
 추천 저장 후보는 **private environment Secret**이다. repository Secret은 queued 시점의 값이 될 수 있으므로 토큰 저장 위치로 대신하지 않는다. GitHub Secrets는 읽기 API/CAS가 없으며, 전체 bundle+제어 marker를 원자적으로 갱신해 주지도 않는다.
 
