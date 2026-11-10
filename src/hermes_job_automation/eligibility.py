@@ -21,8 +21,8 @@ DEGREE_REQUIREMENTS = (
 )
 JUNIOR_WORDS = ("신입", "경력무관", "경력 무관", "경력무관(신입")
 DATE_PATTERNS = (
-    re.compile(r"(20\d{2})[-./](\d{1,2})[-./](\d{1,2})"),
-    re.compile(r"(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일"),
+    re.compile(r"(?<!\d)(20\d{2})[-./](\d{1,2})[-./](\d{1,2})(?!\d)"),
+    re.compile(r"(?<!\d)(20\d{2})년\s*(\d{1,2})월\s*(\d{1,2})일"),
 )
 
 
@@ -40,22 +40,55 @@ def _text(posting: Posting) -> str:
     ).lower()
 
 
+def _is_open_ended_deadline(value: Optional[str]) -> bool:
+    """Accept clear open-ended values; extra text or dates require separate review."""
+    compact = re.sub(r"\s+", "", value or "").lower()
+    return re.fullmatch(r"상시(?:채용|모집)?|채용시(?:마감|까지)?", compact) is not None
+
+
 def _deadline_date(value: Optional[str]) -> Tuple[Optional[date], bool]:
     if not value:
         return None, False
     lowered = value.strip().lower()
-    if any(token in lowered for token in ("마감", "closed", "종료")):
+    # These words describe a deadline, not completed recruitment. Parse the raw date below.
+    status_text = re.sub(r"채용\s*시\s*마감", "", lowered)
+    status_text = re.sub(r"(?:마감|종료)\s*일(?:자)?", "", status_text)
+    status_text = re.sub(r"(?:조기\s*)?(?:마감|종료)\s*(?:예정|임박|가능)", "", status_text)
+    if any(token in status_text for token in ("마감", "closed", "종료")):
         return None, True
-    if "상시" in lowered or "채용시" in lowered:
+    if _is_open_ended_deadline(value):
         return None, False
+    dates = set()
+    remaining = value
     for pattern in DATE_PATTERNS:
-        match = pattern.search(value)
-        if match:
+        for match in pattern.finditer(value):
+            # A complete match must not be a slice of a longer numeric date token.
+            if re.search(r"\d[-./]$", value[:match.start()]) or re.match(
+                r"[-./]\d", value[match.end():]
+            ):
+                return None, False
             year, month, day = (int(part) for part in match.groups())
             try:
-                return date(year, month, day), False
+                dates.add(date(year, month, day))
             except ValueError:
                 return None, False
+        remaining = pattern.sub(" ", remaining)
+    # Only standalone clock metadata may claim numbers outside complete dates.
+    # Do not let a clock matcher consume components of a malformed date token.
+    remaining = re.sub(
+        r"(?<![\d./])(?<!\d-)(?:"
+        r"\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[+-]\d{2}:\d{2})?"
+        r"|\d{1,2}시(?:\s*\d{1,2}분)?(?:\s*\d{1,2}초)?"
+        r")(?!\d|[-./]\d)",
+        " ",
+        remaining,
+    )
+    # Every number must belong to a complete date or recognized clock; otherwise
+    # the field is unresolved, regardless of which side of a separator remains.
+    if re.search(r"\d", remaining):
+        return None, False
+    if len(dates) == 1:
+        return next(iter(dates)), False
     return None, False
 
 
@@ -73,7 +106,7 @@ def check_eligibility(
         reasons.append("접수 마감 또는 종료 표시")
     elif not posting.deadline or (
         deadline is None
-        and not any(token in (posting.deadline or "").lower() for token in ("상시", "채용시"))
+        and not _is_open_ended_deadline(posting.deadline)
     ):
         missing.append("접수 마감일")
 
