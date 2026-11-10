@@ -62,14 +62,30 @@ def _deadline_date(value: Optional[str]) -> Tuple[Optional[date], bool]:
     remaining = value
     for pattern in DATE_PATTERNS:
         for match in pattern.finditer(value):
+            # A complete match must not be a slice of a longer numeric date token.
+            if re.search(r"\d[-./]$", value[:match.start()]) or re.match(
+                r"[-./]\d", value[match.end():]
+            ):
+                return None, False
             year, month, day = (int(part) for part in match.groups())
             try:
                 dates.add(date(year, month, day))
             except ValueError:
                 return None, False
         remaining = pattern.sub(" ", remaining)
-    # Do not infer a year for partial dates left outside the complete date matches.
-    if re.search(r"(?<!\d)\d{1,2}(?:[-./]\d{1,2}(?!\d)|월\s*\d{1,2}일)", remaining):
+    # Only standalone clock metadata may claim numbers outside complete dates.
+    # Do not let a clock matcher consume components of a malformed date token.
+    remaining = re.sub(
+        r"(?<![\d./])(?<!\d-)(?:"
+        r"\d{1,2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:[+-]\d{2}:\d{2})?"
+        r"|\d{1,2}시(?:\s*\d{1,2}분)?(?:\s*\d{1,2}초)?"
+        r")(?!\d|[-./]\d)",
+        " ",
+        remaining,
+    )
+    # Every number must belong to a complete date or recognized clock; otherwise
+    # the field is unresolved, regardless of which side of a separator remains.
+    if re.search(r"\d", remaining):
         return None, False
     if len(dates) == 1:
         return next(iter(dates)), False
