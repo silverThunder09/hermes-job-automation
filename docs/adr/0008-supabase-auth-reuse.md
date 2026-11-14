@@ -44,6 +44,8 @@
 
 보관 객체·접근 권한·갱신/실패 계약·검증 기준은 [Supabase 인증 상세 설계](../SUPABASE_AUTH_DESIGN.md#credential-lifecycle)가 소유한다. 최초 후보는 고정 비개인 요청의 수동 진단이며 실제 업무 agent 연결은 별도다.
 
+접점·bootstrap의 후속 비교는 [ADR-0009](0009-scoped-auth-db-access.md)에 구체화했다. 전용 LOGIN role·shared session pooler·private repository Secret 조합은 **Proposed 권고**이며 이 문서와 함께 기술 채택·운영 구현은 계속 미승인이다. 추가 서비스나 기존 넓은 서버 키를 자동 선택하지 않는다.
+
 1. 실제 프로젝트의 Vault 사용 가능 여부·root key/backup 복구·관리자와 비용/한도를 확인한다.
 2. [최소권한 접근 경계](../SUPABASE_AUTH_DESIGN.md#access-boundary)에서 전용 DB role/제한된 서버 접점과 bootstrap 종류를 선택한다. **구체 인증 접점은 미선정**이다. 안전한 접근을 확보하지 못하면 운영하지 않는다.
 3. 사용자 기술 선택 후에만 새 버전 SQL·adapter·권한 및 조건부 갱신/실제 읽기 검증을 구현한다. 현재 테이블·INVOKER 정책·기존 credential을 변경하지 않는다.
