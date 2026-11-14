@@ -161,15 +161,15 @@ def main(argv=None) -> int:
             _print(statuses)
         elif args.command == "run":
             files = [Path(value).expanduser().resolve() for value in args.manual_file]
-            _print(
-                run_pipeline(
-                    settings,
-                    manual_files=files,
-                    dry_run=not args.execute,
-                    notify=args.execute,
-                    collect_only=args.collect_only,
-                )
+            report = run_pipeline(
+                settings,
+                manual_files=files,
+                dry_run=not args.execute,
+                notify=args.execute,
+                collect_only=args.collect_only,
             )
+            _print(report)
+            return 1 if report["status"] in ("blocked", "failed") else 0
         elif args.command == "finalize":
             _print(
                 finalize_review(

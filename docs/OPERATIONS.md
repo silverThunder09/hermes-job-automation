@@ -13,9 +13,24 @@
 
 - python -m hermes_job_automation.cli health: 실행 도구와 인증 설정 여부를 요약합니다. 값 자체는 출력하지 않습니다.
 - python -m hermes_job_automation.cli sources: 각 플랫폼의 자동 수집 가능 상태를 보여줍니다.
-- python -m hermes_job_automation.cli run --collect-only: 승인된 소스와 수동 파일만 수집하고 data/to-review.json을 만듭니다.
+- python -m hermes_job_automation.cli run --collect-only: 승인된 소스와 수동 파일만 수집하고, 신규 검토 후보가 있으면 data/to-review.json을 만듭니다. 빈 결과로 기존 검토 대기열을 지우지 않습니다.
 - Hermes 모델이 점수와 문서 초안을 만든 뒤 job-assist finalize --file <검토 JSON>으로 Supabase에 상태를, 로컬에 문서를 저장합니다. `run`/`finalize`는 `--execute` 없이도 Supabase 상태 DB에 쓰므로 오프라인 미리보기 명령이 아닙니다.
 - job-assist finalize --file <검토 JSON> --execute: 점수와 문서를 Google Sheets/Drive에 기록하고 Telegram 요약을 보냅니다.
+
+### 수집 결과와 종료 코드
+
+`run`의 JSON `status`와 Supabase 실행 상태는 일치합니다. 모든 수집원이 차단됐을 때 수집 0건은 **공고가 없다는 확인이 아니라 데이터를 수집하지 못했다는 뜻**입니다.
+
+| status | 의미 | CLI 종료 코드 |
+|---|---|---|
+| `blocked` | 승인·키가 없거나 수동 전용 등으로 성공한 수집원/수동 입력이 없음 | 1 |
+| `failed` | 실제 수집 오류 또는 알 수 없는 결과만 있고 성공/부분 성공이 없음 | 1 |
+| `completed_with_gaps` | 일부 수집 실패/부분 성공 또는 평가·검토 보완이 남음 | 0 |
+| `completed` | 실행한 유효 수집원/수동 입력이 정상 처리됨 | 0 |
+
+`zero_results_confirmed=true`는 실행한 성공 소스/유효 수동 입력이 모두 0건을 반환했고 부분 성공·실패가 없을 때만 표시합니다. 차단·실패·불완전 수집은 false이며, 어떤 값도 **자동 접근하지 않은 다른 플랫폼까지 공고가 없다는 뜻은 아닙니다**. 상세 범위는 `sources`를 함께 확인하세요. 성공·부분 성공 이외 상태에서 전달된 공고는 저장하지 않습니다.
+
+신규 공고가 없으면 개인 프로필을 읽지 않습니다. `run`은 차단 상태라도 실행 기록을 DB에 저장하므로 읽기 전용 진단으로 사용하지 마세요. `--execute`를 사용한 알림은 실제 상태에 맞춰 차단/실패/보완 필요/완료를 구분하며, 이 동작이 전송·운영 실행 승인을 대신하지 않습니다.
 
 ## 제출 승인
 
