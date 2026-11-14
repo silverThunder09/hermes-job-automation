@@ -14,6 +14,7 @@
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | 원본 근거 정리·이력서 편집 | [원본 보존·입력 확인](../../skills/job-tailoring/SKILL.md#input-safety) → [이력서 수정](../../skills/job-tailoring/SKILL.md#resume-edit) | [수정 후 검토·저장](../../skills/job-tailoring/SKILL.md#document-review) |
+| 단일 공고 검토 입력의 문서·검토 결과 빌드 | [단일 공고 빌드](../SINGLE_JOB_CASE.md) | 에이전트 조사/작성과 결정적 빌드 구분. Supabase는 GET만 사용하고 검토 결과는 로컬 산출물이며 DB 평가 쓰기·지원/업로드 아님 |
 | 이미지 OCR·PDF 텍스트 추출 | [원본 보존](../../skills/job-tailoring/SKILL.md#input-safety) → [OCR 사실 검증](../../skills/job-tailoring/SKILL.md#ocr-evidence) → [로컬 OCR](../../skills/job-tailoring/SKILL.md#local-ocr) | 엔진 비교/변경 때만 [OCR 조사](../OCR_SKILL_RESEARCH.md). 원격 OS 지원은 Runtime 섹션 |
 | DOCX/PDF 생성 코드 수정 | [개발 진입점](development.md) → `documents.py`, `tests/test_documents.py` | 설치 폰트/OS 문제일 때만 [클라우드 문서 출력 경계](../CLOUD_DEVELOPMENT.md#4-현재-기능의-클라우드-경계) |
 

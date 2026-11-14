@@ -83,6 +83,9 @@ def main(argv=None) -> int:
     finalize = commands.add_parser("finalize")
     finalize.add_argument("--file", required=True)
     finalize.add_argument("--execute", action="store_true", help="Write configured Google Workspace/Telegram outputs.")
+    case = commands.add_parser("build-case", help="Build local review documents; Supabase GET only.")
+    case.add_argument("--file", required=True)
+    case.add_argument("--output-dir", required=True, help="New local folder; never overwrite an existing path.")
     dry = commands.add_parser("form-dry-run")
     dry.set_defaults(command="form-dry-run")
     approval = commands.add_parser("approve-posting")
@@ -105,7 +108,17 @@ def main(argv=None) -> int:
 
     try:
         settings = Settings.load()
-        if args.command == "ocr-image":
+        if args.command == "build-case":
+            from .case_build import build_case
+
+            result = build_case(settings, Path(args.file).expanduser().resolve(),
+                                Path(args.output_dir).expanduser().resolve())
+            summary = {key: result[key] for key in ("status", "posting_key", "review_file", "files",
+                       "state_read_only", "external_state_writes", "application_submitted",
+                       "external_uploads", "final_user_approved")}
+            summary["documents_generated"] = len(result["files"])
+            _print(summary)
+        elif args.command == "ocr-image":
             from .ocr import extract_image_text
 
             destination = Path(args.output).expanduser().resolve() if args.output else None
@@ -170,7 +183,9 @@ def main(argv=None) -> int:
         elif args.command == "approve-posting":
             return _approve(settings, args)
     except Exception as exc:
-        print(json.dumps({"status": "error", "error": type(exc).__name__, "message": str(exc)}, ensure_ascii=False))
+        message = ("Single-case build failed; inspect inputs and preserved local artifacts."
+                   if args.command == "build-case" else str(exc))
+        print(json.dumps({"status": "error", "error": type(exc).__name__, "message": message}, ensure_ascii=False))
         return 1
     return 0
 
