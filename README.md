@@ -14,19 +14,19 @@
 
 현재 여러 사이트의 브라우저 수집부터 회사 조사·맞춤 문서·무인 자동지원까지 전체 흐름이 완성된 것은 아닙니다. 앱 상태 저장은 ADR-0005에 따라 Supabase PostgreSQL로 단일화했습니다. 로컬 HTTP 계약·격리 PostgreSQL 테스트와 실제 Supabase 배포/설정 검증은 별개이며, ADR의 과거 개인환경 검증 기록을 현재 체크아웃의 배포 완료로 해석하지 않습니다.
 
-공고 수집·조건 판별·평가·문서 초안·기록/알림을 단계적으로 조율합니다. 실제 지원은 기본적으로 꺼져 있으며, 현재 자동 수집 구현은 승인된 공식 API 경로입니다. 브라우저 기반 수집은 목표와 구현/검증 상태를 구분합니다.
+선택한 수집 경로는 **클라우드 브라우저/MCP**입니다. PC-on에는 로컬에서 작업을 시작하고, PC-off에는 GitHub Actions 예약 작업이 같은 클라우드 수집·기존 Supabase 저장을 실행하도록 설계합니다. **사람인 공식 API는 이 운영 경로에서 폐기**했으며 승인·키를 필수 조건으로 요구하지 않습니다. [ADR-0011](docs/adr/0011-private-collection-writer.md)의 결정·승인 범위와 실제 구현/가동 상태를 구분합니다.
 
 PR 발행·리뷰·수정·CI 확인은 [에이전트 주도 PR 자동화](docs/PR_AUTOMATION.md)를 따릅니다. 실행 실패에는 필요한 경우 [간단한 실패 기록](docs/templates/run-failure.md)을 사용하며, 모든 실패에 기업용 장애 보고서를 요구하지 않습니다.
 
 ## 현재 프로젝트 상태
 
-2026-11-14 코드 기준입니다. **코드에 구현된 기능**, **실사용 환경에서 확인한 동작**, **별도 설정이 필요한 연동**, **미구현 목표**를 구분합니다. 한 환경의 확인 결과가 새 설치의 연결·운영 완료를 보장하지는 않습니다.
+2026-11-15 문서 통합 기준입니다. **코드에 구현된 기능**, **실사용 환경에서 확인한 동작**, **별도 설정이 필요한 연동**, **미구현 목표**를 구분합니다. 한 환경의 확인 결과가 새 설치의 연결·운영 완료를 보장하지는 않습니다.
 
 | 기능 | 현재 가능한 범위 | 조건·검증 한계 |
 |---|---|---|
 | 공고·상태 DB 저장 | 공고/적격성, 평가, 지원 상태/메모, 실행 기록을 Supabase에 저장·조회 | 실사용 환경에서 공개 공고 저장과 정확한 재조회를 확인. 새 환경은 [스키마·설정 검증](docs/SUPABASE_STATE.md) 필요 |
 | 중복과 상태 보존 | 공고 키·정규 URL·플랫폼 공고 ID로 서버에서 중복 판정 | 중복 수집은 `last_seen_at`만 갱신. 기존 공고·평가·지원 상태·메모를 보존 |
-| 자동 공고 수집 | 사람인 공식 API 수집기 구현 | 사전 API 승인과 키가 모두 필요. 나머지 6개 플랫폼 수집기는 `manual_only`이며 자동 수집하지 않음 |
+| 클라우드 공고 수집 | 브라우저/MCP 경로와 PC-on/PC-off 실행 경계 결정. 별도 [단건 원격 시험](https://github.com/silverThunder09/hermes-job-automation/issues/26)에서 공개 공고 읽기 확인 | 검색·다건 수집→원격 DB 저장 연결은 미구현·미검증. 기존 Python API/`manual_only` 수집기 상태는 이 새 경로의 실행 결과가 아님 |
 | 수동 공고 등록 | 사용자가 확인한 공고 JSON을 `run --manual-file`로 가져오기 | [입력 형식·접근 정책](docs/PLATFORM_ACCESS.md) 준수. `user_reviewed_manual`만 허용하며 에이전트 조사 결과를 사용자 검토 완료로 바꾸지 않음 |
 | 필수 조건 판별 | 마감, 지역, 고용형태, 학력·경력 충돌을 선별 | 기본 범위는 서울·경기·인천, 정규직·인턴, 고졸/학력무관, 유급 백엔드 경력 0년. 미확인 요건은 검토 대상으로 유지 |
 | 평가·검토 대기열 | `run --collect-only`로 DB 저장 후 `to-review.json` 생성 | 모델 평가·문서 생성을 생략하는 수집 단계. 활성 수집원/수동 입력이 없으면 공고 0건일 수 있음 |
@@ -37,7 +37,7 @@ PR 발행·리뷰·수정·CI 확인은 [에이전트 주도 PR 자동화](docs/
 | 브라우저·양식 진단 | `runtime-check`, `form-dry-run`으로 합성 HTML의 브라우저/입력 동작 검사 | 로컬 fixture 검증이며 실사이트 로그인·수집·제출 성공을 뜻하지 않음 |
 | Sheets·Drive·Telegram | 결과 행 기록, 생성 서류 업로드, 완료 알림 구현 | 연결 설정과 `--execute` 필요. 모든 실계정 연동을 현재 검증했다는 의미는 아님 |
 | 실제 지원서 제출 | 승인 검사·원자적 claim·결과 불명 시 재시도 차단 helper 구현 | `run`/`finalize`에 실사이트 제출이 연결된 것은 아니며 무인 자동지원 미완성 |
-| 예약·보관 후 삭제 | 운영 방향과 승인 경계 문서화 | 운영 GitHub 예약 배치는 미구현·미가동. 공고 7일 자동 삭제 구현은 저장소에 없으며 별도 운영 DB 예약은 미검증 |
+| 원격 운영·예약·보관 후 삭제 | 수집/저장 job 분리와 조건부 1회 원격 저장 검증 승인 | 운영 구현·예약 가동은 미완료. 예약은 1회 검증 후 별도 승인. 공고 7일 자동 삭제 구현은 저장소에 없으며 별도 운영 DB 예약은 미검증 |
 
 사람인 외 플랫폼의 공개 페이지 조사와 자동 수집기 활성화는 별개입니다. 접근 실패·보안 확인·상세 요건 미확인은 공고 없음으로 처리하지 않습니다. 허용된 조사 결과도 **로컬 JSON만 생성했다면 DB에 자동 저장된 것이 아닙니다**. 출처와 검토 상태를 보존해 승인된 저장 경로로 등록하고, 정확한 공고 키로 원격 재조회해야 저장 완료입니다.
 
@@ -49,7 +49,7 @@ GitHub 저장소의 **Code → Codespaces → Create codespace on main** 또는 
 
 개인 이력서·포트폴리오·생성 결과·프로필·자격 증명은 저장소에 포함하지 않습니다. `profile.example.json`은 빈 템플릿입니다. 실제 프로필은 무시되는 `profile.json`에 보관합니다.
 
-PC-off 운영 방향은 [GitHub Actions 일회성 배치·공개 개발/비공개 운영 분리](docs/adr/0006-actions-batch-boundary.md)로 결정했습니다. 별도 상시 Hermes Cloud/VPS를 필수로 두지 않습니다. 아래 클라우드 개발환경과 Cloud 설치 예시는 선택적 대안이며 운영 인증·예약이 가동됐다는 뜻은 아닙니다. OS/OCR 등 남은 제한은 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
+PC-off 운영 방향은 [GitHub Actions 일회성 배치·공개 개발/비공개 운영 분리](docs/adr/0006-actions-batch-boundary.md), PC-on과 공통 수집·원격 저장 계약은 [ADR-0011](docs/adr/0011-private-collection-writer.md)로 결정했습니다. 별도 상시 Hermes Cloud/VPS를 필수로 두지 않습니다. 아래 클라우드 개발환경과 Cloud 설치 예시는 선택적 대안이며 운영 인증·예약이 가동됐다는 뜻은 아닙니다. OS/OCR 등 남은 제한은 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
 
 ## 설치
 
@@ -73,7 +73,7 @@ $env:PYTHONUTF8 = '1'
 & "$RuntimeRoot\.venv\Scripts\python.exe" -m hermes_job_automation.cli run --collect-only
 ```
 
-`state-health`는 기존 Supabase 스키마·권한·비공개 버킷을 읽기 전용으로 확인합니다. `sources`는 수집기를 실행하므로 사람인 승인·키가 있으면 실제 API를 조회합니다. `run --collect-only`는 외부 알림 없이 수집 공고를 DB에 저장하고 검토 대기열을 만듭니다. `--execute`가 없어도 DB에는 쓰므로 오프라인 미리보기 명령이 아닙니다.
+`state-health`는 기존 Supabase 스키마·권한·비공개 버킷을 읽기 전용으로 확인합니다. **위 `sources`·`run`은 기존 Python 경로이며 새 클라우드 수집 명령이 아닙니다.** 기존 사람인 승인·키 설정이 있으면 실제 API를 호출할 수 있으므로, API 폐기 결정이 코드를 비활성화했다고 오인해 실행하지 마세요. `run --collect-only`는 외부 알림 없이 수집 공고를 DB에 저장하고 검토 대기열을 만듭니다. `--execute`가 없어도 DB에는 쓰므로 오프라인 미리보기 명령이 아닙니다.
 
 사용자가 확인한 공고 파일이 있다면 `run --collect-only --manual-file .\data\reviewed-postings.json`처럼 가져올 수 있습니다. 에이전트 조사 보고서나 임의 JSON이 그대로 이 입력 형식을 만족하는 것은 아닙니다.
 
@@ -120,7 +120,7 @@ GitHub 스킬 조사와 출처는 `docs/OCR_SKILL_RESEARCH.md`에 있습니다. 
 
 ## 예약 실행
 
-**선택한 운영 방향은 매일 04:00 `Asia/Seoul`의 GitHub-hosted 배치**입니다. 현재 공개 저장소는 비밀 없는 개발 CI를 유지하며, 민감 운영은 별도 비공개 영역으로 분리합니다. [ADR-0006](docs/adr/0006-actions-batch-boundary.md)의 결정 범위와 미승인 인증/가동 관문을 먼저 확인하세요. 실제 운영 workflow·인증·예약은 아직 구현/등록하지 않았습니다. GitHub 예약은 지연·누락될 수 있어 정각 시작을 보장하지 않습니다.
+**선택한 운영 방향은 매일 04:00 `Asia/Seoul`의 GitHub-hosted 배치**입니다. 현재 공개 저장소는 비밀 없는 개발 CI를 유지하며, 민감 운영은 별도 비공개 영역으로 분리합니다. [ADR-0006](docs/adr/0006-actions-batch-boundary.md)과 [ADR-0011](docs/adr/0011-private-collection-writer.md)을 확인하세요. 조건부 1회 수동 원격 저장 검증은 승인됐지만 실제 운영 workflow·인증·예약은 아직 구현/등록하지 않았습니다. 예약 가동은 별도 승인 대상이며 GitHub 예약은 지연·누락될 수 있어 정각 시작을 보장하지 않습니다.
 
 다음은 **선택적 로컬 실행 예시**입니다. PC-off 운영 경로가 아니며 예약 등록은 별도 승인 대상입니다. 로그인한 Windows 세션에서 매일 04:00 KST 실행하도록 등록하는 기존 스크립트:
 
@@ -143,7 +143,7 @@ Hermes Gateway가 상시 실행되는 서버에서는 hermes/cron-job.txt의 Cro
 - Google Sheets/Drive: OAuth 데스크톱 클라이언트 또는 공유된 서비스 계정
 - GPT: Hermes의 ChatGPT/Codex 구독 연결을 우선 사용하거나, OpenAI API key와 model 지정
 - Telegram: bot token과 본인 chat ID
-- 채용 사이트: 공식 API 신청·승인 및 사용범위 확인
+- 채용 사이트: 선택한 클라우드 브라우저/MCP 경로의 접근·수집 허용 범위 확인. 사람인 API 신청·키 발급은 선행 조건이 아님
 
 상세 설정은 docs/GOOGLE_WORKSPACE_SETUP.md, docs/OPERATIONS.md, docs/PLATFORM_ACCESS.md를 참고하세요.
 
