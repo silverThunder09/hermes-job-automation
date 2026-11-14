@@ -29,6 +29,8 @@ Vault는 암호화 저장과 권한 있는 SQL의 복호화 조회/갱신 기능
 - Vault의 root encryption key 운영·백업/복구·관리자 접근을 확인한다. root key를 runner로 복사하거나 애플리케이션이 직접 암호화 키를 관리하는 방식을 전제하지 않는다. 허용된 복호화 view 사용자는 평문을 읽을 수 있으므로 암호화가 관리자 접근까지 차단한다고 보장하지 않는다.
 - 인증 controller는 DB bootstrap과 상태 접근을 소유하고, model child에는 원격 전용 provider bundle만 최소 전달하는 경계를 설계한다. 같은 UID·환경변수 분리·별도 step·HERMES_HOME만으로 악성 프로세스를 격리하지 못한다. 실제 OS/작업 경계·자식 종료·로그 통제 검증 전 실사이트/첨부/임의 tool 입력을 연결하지 않는다.
 
+접점·bootstrap 선택안과 권한/회전의 구체적 합격 기준은 [ADR-0009](adr/0009-scoped-auth-db-access.md)에 정리했다. **전용 LOGIN role → shared session pooler → 고정 인증 함수**, bootstrap은 **private 운영 저장소의 repository Actions Secret**이 우선 권고 조합이다. 아직 사용자 기술 선택 전이며 실제 접점은 미구현이다. 이 후속안은 아래 갱신·저장 수명주기 계약이나 기존 업무 INVOKER 정책을 대체하지 않는다.
+
 <a id="credential-lifecycle"></a>
 ## 3. 갱신·저장·재조회 계약
 
@@ -70,6 +72,10 @@ Vault는 암호화 저장과 권한 있는 SQL의 복호화 조회/갱신 기능
 ## 5. 검증·구현 경계
 
 이번 PR은 새 SQL·adapter·key·Vault 연결·실제 OAuth 시험을 포함하지 않는다. 기존 [메모리 모형](../scripts/auth_lifecycle_model.py)도 변경하지 않는다. 그 모형의 trust/lease/value-match는 가정한 입력이며 실제 PostgreSQL/Vault 원자성·권한·내구성 증거가 아니다. 문서 계약은 링크/앵커·현재 우선안 발견·이전 Proposed 이력 보존을 검증할 뿐이다.
+
+후속 로컬 개발의 [SQL 프로토타입](../supabase/prototypes/README.md)은 실사용 DB 없이 격리 PostgreSQL에서 제어 메타데이터·권한·claim 경쟁·rollback·재시작 유지 여부를 검증한다. 자동 적용 migration 경로 밖에 있으며 실제 Vault·credential 값·OAuth·pooler·TLS·비밀번호·운영 adapter를 구현한 것은 아니다. 실제 값 검증이 없어 finalize/reset 함수도 제공하지 않는다.
+
+같은 로컬 범위의 [Python controller](../scripts/auth_control_lab.py)는 고정 SQL 함수와 독립 snapshot을 연결한다. claim marker 확인 전 합성 정수 작업을 실행하지 않고, stage ACK/metadata가 불명확하면 재시도 없이 멈춘다. controller 계약 대역과 실제 PostgreSQL 통합/CLI 실행 증거를 구분하며 실제 credential readback이나 provider 실행을 구현한 것으로 보고하지 않는다.
 
 구현 선택 후 필요한 증거:
 

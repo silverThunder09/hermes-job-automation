@@ -30,7 +30,7 @@
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | Supabase 설정·상태 조회/쓰기·SQL | [상태 저장소](../SUPABASE_STATE.md) | 구조 변경은 [ADR-0005](../adr/0005-supabase-postgres-only.md). 실제 DB 쓰기는 해당 대상 승인 후 |
-| GPT 로그인 정보의 Supabase 재사용·권한 | [인증 전용 접근 경계](../SUPABASE_AUTH_DESIGN.md#access-boundary) | 업무 DB와 credential·외부 bootstrap을 구분. 현재 접점/권한은 미선정·운영 미구현이며 실제 DB/키 변경은 별도 승인 |
+| GPT 로그인 정보의 Supabase 재사용·권한 | [인증 전용 접근 경계](../SUPABASE_AUTH_DESIGN.md#access-boundary) | 접점·bootstrap은 [ADR-0009](../adr/0009-scoped-auth-db-access.md), 비밀 없는 로컬 권한/동시성 검사는 [SQL 프로토타입](../../supabase/prototypes/README.md). 권고 조합은 Proposed·운영 미구현이며 실제 DB/키 변경은 별도 승인 |
 | Google Sheets/Drive 연결 | [Google 설정](../GOOGLE_WORKSPACE_SETUP.md) | [운영 실행 단계](../OPERATIONS.md#실행-단계)의 `--execute` 외부 쓰기 경계 |
 | Telegram·실행 결과·로그 | [운영 가이드](../OPERATIONS.md) | 장애 기록이 필요할 때만 [실패 템플릿](../templates/run-failure.md) |
 
@@ -40,7 +40,7 @@
 |---|---|---|
 | 인증 없는 Chromium 진단·CI 실패 | [runtime-check 계약](../../README.md#오프라인-브라우저-실행-진단) | `runtime_check.py`, `tests/test_runtime_check.py`, `.github/workflows/ci.yml`. 운영 설정/모델 인증 문서 로드 불필요 |
 | 설치·Codespaces·OS/폰트 경계 | [개발/클라우드 실행 경계](../CLOUD_DEVELOPMENT.md) | 패키지/테스트 명령은 [개발 진입점](development.md). 개발환경은 운영 배포가 아님 |
-| GPT 모델·구독·인증 연결 조사 | [Supabase 재사용 우선안 ADR-0008](../adr/0008-supabase-auth-reuse.md) | 현재 [수명주기 계약](../SUPABASE_AUTH_DESIGN.md#credential-lifecycle)은 **Proposed·운영 미구현**, 기술 선택 후 구현. [ADR-0007](../adr/0007-remote-model-auth.md)·[GitHub 계약](../REMOTE_AUTH_DESIGN.md#credential-lifecycle)은 비교 이력. [기존 공식 조사](../HERMES_OFFICIAL_RESEARCH.md)·[최신 Hermes 문서](https://hermes-agent.nousresearch.com/docs/integrations/providers)·실제 코드를 대조하고 Hermes/Python API/standalone Codex를 분리 |
+| GPT 모델·구독·인증 연결 조사 | [Supabase 재사용 우선안 ADR-0008](../adr/0008-supabase-auth-reuse.md) | 접점·최초 접속 자격 선택은 [ADR-0009](../adr/0009-scoped-auth-db-access.md). 현재 [수명주기 계약](../SUPABASE_AUTH_DESIGN.md#credential-lifecycle)과 권고 조합은 **Proposed·운영 미구현**, 기술 선택 후 구현. [ADR-0007](../adr/0007-remote-model-auth.md)·[GitHub 계약](../REMOTE_AUTH_DESIGN.md#credential-lifecycle)은 비교 이력. [기존 공식 조사](../HERMES_OFFICIAL_RESEARCH.md)·[최신 Hermes 문서](https://hermes-agent.nousresearch.com/docs/integrations/providers)·실제 코드를 대조하고 Hermes/Python API/standalone Codex를 분리 |
 | PC-off 예약·인증 보존·임시파일 정리 | [04시 Actions 배치·공개/비공개 경계 ADR-0006](../adr/0006-actions-batch-boundary.md) | 호스트·시각·격리만 확정. [보존/삭제 제안 ADR-0003](../adr/0003-scheduled-collection-and-retention.md)은 여전히 Proposed. [운영 안내](../OPERATIONS.md#예약과-재부팅)·[클라우드 경계](../CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 필요한 경우만 읽고 미결정 인증/자료/비용·가동 승인 관문 유지 |
 
 ## Product
