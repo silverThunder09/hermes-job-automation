@@ -1,0 +1,15 @@
+{
+  "name": "cloud-mcp-readonly-probe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test probe.test.mjs",
+    "tools": "node probe.mjs --tools-only",
+    "probe": "node probe.mjs"
+  },
+  "dependencies": {
+    "@playwright/mcp": "0.0.85",
+    "@modelcontextprotocol/sdk": "1.32.2"
+  }
+}
