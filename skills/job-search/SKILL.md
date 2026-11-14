@@ -11,10 +11,14 @@ When the user supplies a job URL with an attached resume or portfolio, first rea
 
 For local posting images, use `python -m hermes_job_automation.cli ocr-image --file <image> --language ko --output <new-json>`. Compare critical fields with the original; OCR output is never automatically verified. Text-based PDFs should be extracted without OCR, but still inspect diagrams and image-only regions. Do not infer missing applicant facts from profile.example.json when an attached document does not establish them.
 
-Run the project workflow in this order:
+## Selected collection runtime
+
+Read [ADR-0011](../../docs/adr/0011-private-collection-writer.md) for collection/runtime work. PC-on starts cloud browser/MCP work from the local agent; PC-off uses a GitHub Actions scheduled cloud run. Both use the existing Supabase. The Saramin official-API operating path is retired: do not request its approval/key or use legacy collector statuses as evidence that the selected cloud path failed. The browser-to-remote-storage integration is not yet implemented, and schedules require separate activation approval after the bounded manual verification. Preserve platform access, provenance, no-bypass and DB-write boundaries. Do not invent a cloud collection command or relabel agent research as user-reviewed input.
+
+Run the existing Python review workflow in this order:
 
 1. Read the current profile from profile.json and the platform access rules in docs/PLATFORM_ACCESS.md.
-2. Run python -m hermes_job_automation.cli run --collect-only. Use only approved official APIs and user-reviewed manual imports. Treat each source independently; record any source that is disabled or fails.
+2. Use `python -m hermes_job_automation.cli run --collect-only` only for the existing Python pipeline and user-reviewed manual imports, not as the new cloud collector. It can still invoke the legacy Saramin API when its old settings are active; the retirement decision has not disabled that code. Do not activate it as a fallback. Agent-researched cloud output needs the approved dedicated save path and exact read-back; manual import accepts only genuinely user-reviewed records. Record disabled or failed sources separately from a successful zero-result search.
 3. Open data/to-review.json. Recheck every posting's deadline, city, experience, education, and employment type against the detail data included by its source. Exclude explicit degree requirements above high school and mandatory paid backend experience of one year or more. Treat missing or contradictory requirements as review.
 4. Score only eligible or review postings. Use technical fit 35, work fit 30, project fit 25, and preferred qualifications 10. Every rationale must point to a supplied posting fact and a verified profile fact. QA employment is not paid backend experience.
 5. Draft company-specific resume and cover-letter text only for eligible postings with total score at least MINIMUM_SCORE. Use the profile's verified facts; preserve its limitations. Never add unverified jobs, qualifications, skills, quantities, or outcomes.

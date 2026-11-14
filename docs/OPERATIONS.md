@@ -4,7 +4,7 @@
 
 1. `.env`가 없을 때만 `.env.example`을 복사합니다. 기존 파일/자격 증명은 덮어쓰지 않고 필요한 값만 로컬에서 채웁니다.
 2. profile.example.json을 profile.json으로 복사하고 원본 이력서에서 확인한 연락처를 필요한 경우에만 채웁니다.
-3. 사람인 API를 쓸 때는 이용 승인이 끝난 뒤 SARAMIN_API_APPROVED=true와 발급 키를 설정합니다.
+3. 수집은 [ADR-0011](adr/0011-private-collection-writer.md)의 클라우드 브라우저/MCP 경로를 따릅니다. 사람인 공식 API는 운영 선택지에서 폐기했으며 승인·키를 요구하지 않습니다. 아래 기존 Python CLI 예시는 이 새 수집 경로의 구현/배포 증거가 아닙니다.
 4. GPT API를 직접 쓸 경우 OPENAI_API_KEY와 OPENAI_MODEL을 지정합니다. Hermes Cron은 Hermes에 로그인한 모델을 사용하도록 skills/job-search/SKILL.md 절차를 따릅니다.
 5. Google Sheets/Drive와 Telegram 연결은 별도 안내에 따라 설정합니다.
 6. 상태 DB는 Supabase PostgreSQL만 사용합니다. `JOB_ASSIST_STATE_BACKEND`는 미지정 또는 정확히 `supabase`로 설정하고, `SUPABASE_URL`·`SUPABASE_SECRET_KEY`·`SUPABASE_STORAGE_BUCKET`을 구성합니다. `sqlite`/알 수 없는 값은 오류이며 자격 증명 누락이나 네트워크 장애 때 로컬 DB로 우회하지 않습니다. [상태 저장소 안내](SUPABASE_STATE.md)의 read-only health와 별도 승인된 smoke 검증을 확인하세요.
@@ -12,7 +12,7 @@
 ## 실행 단계
 
 - python -m hermes_job_automation.cli health: 실행 도구와 인증 설정 여부를 요약합니다. 값 자체는 출력하지 않습니다.
-- python -m hermes_job_automation.cli sources: 각 플랫폼의 자동 수집 가능 상태를 보여줍니다.
+- python -m hermes_job_automation.cli sources: 기존 Python 수집기를 실행합니다. 기존 사람인 API 설정이 활성화돼 있으면 실제 API를 호출할 수 있습니다. 선택한 클라우드 브라우저/MCP 경로의 상태 조회 명령이 아닙니다.
 - python -m hermes_job_automation.cli run --collect-only: 승인된 소스와 수동 파일만 수집하고 data/to-review.json을 만듭니다.
 - Hermes 모델이 점수와 문서 초안을 만든 뒤 job-assist finalize --file <검토 JSON>으로 Supabase에 상태를, 로컬에 문서를 저장합니다. `run`/`finalize`는 `--execute` 없이도 Supabase 상태 DB에 쓰므로 오프라인 미리보기 명령이 아닙니다.
 - job-assist finalize --file <검토 JSON> --execute: 점수와 문서를 Google Sheets/Drive에 기록하고 Telegram 요약을 보냅니다.
@@ -29,7 +29,7 @@
 
 Windows 작업은 사용자 로그인이 되어 있고 PC가 켜져 있을 때만 실행됩니다. 꺼진 시간의 작업은 Windows가 다음 로그인 후 처리합니다. Hermes Gateway도 Windows 사용자 세션과 브라우저·모델 로그인 상태를 점검해야 합니다.
 
-PC-off 운영은 [ADR-0006](adr/0006-actions-batch-boundary.md)에 따라 **매일 04:00 `Asia/Seoul`의 GitHub-hosted 일회성 배치**, 공개 개발 CI와 비공개 민감 운영의 분리로 결정했습니다. 별도 상시 Cloud/VPS/Gateway는 필수가 아닙니다. 위 Windows/Gateway 절차는 선택적 로컬 경로입니다. 새 운영 저장소·인증 보관/갱신·비용 차단·자료 처리의 세부 결정과 수동 원격 검증 후 별도 예약 가동 승인이 필요합니다. 현재 운영 workflow/인증/예약은 미구현·미가동이며 정각 시작도 보장하지 않습니다. [클라우드 실행 경계](CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 참고하세요.
+PC-off 운영은 [ADR-0006](adr/0006-actions-batch-boundary.md)에 따라 **매일 04:00 `Asia/Seoul`의 GitHub-hosted 일회성 배치**, 공개 개발 CI와 비공개 민감 운영의 분리로 결정했습니다. [ADR-0011](adr/0011-private-collection-writer.md)은 PC-on의 로컬 시작→클라우드 수집, PC-off의 Actions 시작→클라우드 실행, 공통 Supabase 저장과 별도 collection/storage job을 정합니다. 비공개 운영 저장소·기존 DB 설정의 Secrets 등록·조건부 1회 원격 저장 검증은 승인 범위에 포함되지만 아직 구현/배포하지 않았습니다. 예약 가동·모델 인증 이전·개인자료·제출은 별도 승인입니다. 별도 상시 Cloud/VPS/Gateway는 필수가 아니며 위 Windows/Gateway 절차는 선택적 로컬 경로입니다. 현재 운영 workflow/인증/예약은 미구현·미가동이며 정각 시작도 보장하지 않습니다. [클라우드 실행 경계](CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 참고하세요.
 
 ## 로그와 개인정보
 
