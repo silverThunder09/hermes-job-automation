@@ -29,7 +29,7 @@ PR 발행·리뷰·수정·CI 확인은 [에이전트 주도 PR 자동화](docs/
 | 자동 공고 수집 | 사람인 공식 API 수집기 구현 | 사전 API 승인과 키가 모두 필요. 나머지 6개 플랫폼 수집기는 `manual_only`이며 자동 수집하지 않음 |
 | 수동 공고 등록 | 사용자가 확인한 공고 JSON을 `run --manual-file`로 가져오기 | [입력 형식·접근 정책](docs/PLATFORM_ACCESS.md) 준수. `user_reviewed_manual`만 허용하며 에이전트 조사 결과를 사용자 검토 완료로 바꾸지 않음 |
 | 필수 조건 판별 | 마감, 지역, 고용형태, 학력·경력 충돌을 선별 | 기본 범위는 서울·경기·인천, 정규직·인턴, 고졸/학력무관, 유급 백엔드 경력 0년. 미확인 요건은 검토 대상으로 유지 |
-| 평가·검토 대기열 | `run --collect-only`로 DB 저장 후 `to-review.json` 생성 | 모델 평가·문서 생성을 생략하는 수집 단계. 활성 수집원/수동 입력이 없으면 공고 0건일 수 있음 |
+| 평가·검토 대기열 | `run --collect-only`로 DB 저장 후 신규 검토 후보가 있으면 `to-review.json` 생성 | 수집 차단·실패와 정상 0건을 구분. 후보가 없을 때 기존 대기열을 덮어쓰지 않음. [상태·종료 코드](docs/OPERATIONS.md#수집-결과와-종료-코드) 확인 |
 | 평가 반영·지원 문서 | `finalize`로 검토 JSON의 점수·초안을 확인하고 평가 저장, 조건 충족 시 DOCX/PDF 생성 | 검토된 이력서·자소서 본문과 기준 점수 필요. API 평가 경로는 별도 OpenAI API key/model 설정 필요 |
 | 공고·회사별 맞춤 검토 | [job-tailoring](skills/job-tailoring/SKILL.md)의 공고 분석·회사 조사·원본 보존 편집 절차 | 에이전트 보조 작업이며 Python 일괄 실행에 완전 자동 연결된 기능은 아님 |
 | 단일 공고 검토 산출물 | [`build-case`](docs/SINGLE_JOB_CASE.md)로 에이전트 작성 입력 → 등록 공고 GET 대조 → 조건·초안 검증 → DOCX/PDF·로컬 검토 기록 | 원본 PDF/DOCX와 검토 입력 필요. DB 평가 쓰기·모델 호출·웹 조사·제출은 하지 않으며 누락 정보는 확인 필요로 유지 |
@@ -74,6 +74,8 @@ $env:PYTHONUTF8 = '1'
 ```
 
 `state-health`는 기존 Supabase 스키마·권한·비공개 버킷을 읽기 전용으로 확인합니다. `sources`는 수집기를 실행하므로 사람인 승인·키가 있으면 실제 API를 조회합니다. `run --collect-only`는 외부 알림 없이 수집 공고를 DB에 저장하고 검토 대기열을 만듭니다. `--execute`가 없어도 DB에는 쓰므로 오프라인 미리보기 명령이 아닙니다.
+
+`run`의 `blocked`/`failed`는 종료 코드 1이며 정상적인 공고 없음과 구분합니다. JSON의 `zero_results_confirmed`와 `sources`를 함께 확인하세요. 모든 소스가 차단된 실행을 정상 완료로 기록하지 않으며, 신규 검토 후보가 없으면 기존 대기열을 보존합니다.
 
 사용자가 확인한 공고 파일이 있다면 `run --collect-only --manual-file .\data\reviewed-postings.json`처럼 가져올 수 있습니다. 에이전트 조사 보고서나 임의 JSON이 그대로 이 입력 형식을 만족하는 것은 아닙니다.
 

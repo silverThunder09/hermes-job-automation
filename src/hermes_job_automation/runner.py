@@ -71,6 +71,15 @@ def _manual_result(files: Sequence[Path]) -> tuple:
     return postings, results
 
 
+def _collection_status(results: Sequence[Dict[str, Any]]) -> str:
+    states = [item["status"] for item in results]
+    blocked = ("approval_required", "credential_missing", "manual_only")
+    has_errors = any(value not in blocked + ("success", "partial") for value in states)
+    if not any(value in ("success", "partial") for value in states):
+        return "failed" if has_errors else "blocked"
+    return "completed_with_gaps" if has_errors or "partial" in states else "completed"
+
+
 def run_pipeline(
     settings: Settings,
     manual_files: Optional[Sequence[Path]] = None,
@@ -93,12 +102,13 @@ def run_pipeline(
         for collector in all_collectors(settings):
             try:
                 result = collector.collect()
-                collected.extend(result.postings)
+                accepted = result.postings if result.status in ("success", "partial") else []
+                collected.extend(accepted)
                 source_results.append(
                     {
                         "platform": result.platform,
                         "status": result.status,
-                        "count": len(result.postings),
+                        "count": len(accepted),
                         "message": result.message,
                         "error": result.error,
                     }
@@ -112,7 +122,8 @@ def run_pipeline(
                         "error": type(exc).__name__,
                     }
                 )
-                log.exception("Source failed: %s", getattr(collector, "platform", "unknown"))
+                log.error("Source failed: %s (%s)", getattr(collector, "platform", "unknown"),
+                          type(exc).__name__)
 
         manual_postings, manual_results = _manual_result(manual_files or [])
         collected.extend(manual_postings)
@@ -126,7 +137,7 @@ def run_pipeline(
             if store.save_posting(posting, eligibility.to_dict()):
                 new_postings.append(posting)
 
-        profile = _load_profile(settings)
+        profile = _load_profile(settings) if new_postings else {}
         # Contact details are not needed for fit scoring and must not leave the
         # local workspace in Hermes review JSON, run reports, or model prompts.
         scoring_profile = {
@@ -222,7 +233,17 @@ def run_pipeline(
         review_count = sum(
             1 for value in eligibility_by_key.values() if value.status == "review"
         )
+        collection_status = _collection_status(source_results)
+        needs_review = any(
+            eligibility_by_key[posting_key(posting)].status == "review"
+            for posting in new_postings
+        ) or any(evaluation.eligibility == "review" for _, evaluation in evaluated)
+        status = collection_status
+        if collection_status == "completed" and (unscored or needs_review):
+            status = "completed_with_gaps"
         report = {
+            "status": status,
+            "zero_results_confirmed": collection_status == "completed" and not collected,
             "run_id": run_id,
             "started_at": started.isoformat(),
             "finished_at": _now(settings).isoformat(),
@@ -241,7 +262,7 @@ def run_pipeline(
         report_dir.mkdir(parents=True, exist_ok=True)
         report_path = report_dir / "{}.json".format(started.strftime("%Y-%m-%d-%H%M%S"))
         report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-        if collect_only:
+        if collect_only and review_queue:
             review_path = settings.data_dir / "to-review.json"
             review_path.write_text(
                 json.dumps(
@@ -260,14 +281,21 @@ def run_pipeline(
         store.finish_run(
             run_id,
             report["finished_at"],
-            "completed_with_gaps" if unscored else "completed",
+            report["status"],
             report,
         )
         if notify and not dry_run:
+            heading = {
+                "blocked": "채용공고 수집 차단",
+                "failed": "채용공고 수집 실패",
+                "completed_with_gaps": "채용공고 작업 보완 필요",
+                "completed": "채용공고 작업 완료",
+            }[report["status"]]
             message = (
-                "채용공고 작업 완료\n"
+                "{}\n"
                 "수집 {} · 신규 {} · 조건 통과 {} · 제외 {} · 확인 필요 {}\n"
                 "평가 {} · 미평가 {} · 시트 {}".format(
+                    heading,
                     report["collected"],
                     report["new"],
                     report["eligible"],
