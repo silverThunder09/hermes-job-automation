@@ -11,6 +11,8 @@
 
 ## 실행 단계
 
+공개 공고 수집의 진행·중단 판정은 [현행 플랫폼 접근 정책](PLATFORM_ACCESS.md)을 적용합니다. 명시적 허가를 못 찾았다는 사실만으로 중단하지 않으며 공식 문의를 필수로 요구하지 않습니다. DB 쓰기·예약·제출의 기존 승인과 명시적 제한·접근 통제는 별도로 유지합니다. 아래 명령은 여전히 기존 Python 경로이며 정책 문서 수정이 수집기 활성화나 운영 가동은 아닙니다.
+
 - python -m hermes_job_automation.cli health: 실행 도구와 인증 설정 여부를 요약합니다. 값 자체는 출력하지 않습니다.
 - python -m hermes_job_automation.cli sources: 기존 Python 수집기를 실행합니다. 기존 사람인 API 설정이 활성화돼 있으면 실제 API를 호출할 수 있습니다. 선택한 클라우드 브라우저/MCP 경로의 상태 조회 명령이 아닙니다.
 - python -m hermes_job_automation.cli run --collect-only: 승인된 소스와 수동 파일만 수집하고 data/to-review.json을 만듭니다.

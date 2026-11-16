@@ -15,6 +15,8 @@ For local posting images, use `python -m hermes_job_automation.cli ocr-image --f
 
 Read [ADR-0011](../../docs/adr/0011-private-collection-writer.md) for collection/runtime work. PC-on starts cloud browser/MCP work from the local agent; PC-off uses a GitHub Actions scheduled cloud run. Both use the existing Supabase. The Saramin official-API operating path is retired: do not request its approval/key or use legacy collector statuses as evidence that the selected cloud path failed. The browser-to-remote-storage integration is not yet implemented, and schedules require separate activation approval after the bounded manual verification. Preserve platform access, provenance, no-bypass and DB-write boundaries. Do not invent a cloud collection command or relabel agent research as user-reviewed input.
 
+Use the [current platform policy](../../docs/PLATFORM_ACCESS.md) as the sole owner of collection decisions. Missing an explicit permission statement alone does not block bounded public-page work within user authorization. Preserve applicable explicit restrictions, robots path limits, no-bypass rules and separate DB-write/submission/schedule authority; historical permission-first notes do not restore the removed blanket gate. This is not a collector implementation or activation.
+
 Run the existing Python review workflow in this order:
 
 1. Read the current profile from profile.json and the platform access rules in docs/PLATFORM_ACCESS.md.

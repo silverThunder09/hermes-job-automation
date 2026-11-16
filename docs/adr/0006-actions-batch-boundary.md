@@ -5,6 +5,7 @@
 - 구현/배포/가동 상태: **미구현·미가동**. 기존 개발 CI의 오프라인 브라우저 검증과 운영 배치를 구분한다.
 - 연결 이슈: [#11](https://github.com/silverThunder09/hermes-job-automation/issues/11)
 - 이전 제안: [ADR-0003](0003-scheduled-collection-and-retention.md)의 실행 호스트·시각 부분만 이 결정으로 구체화한다. 보존/삭제 등 나머지 제안은 Proposed다.
+- 후속 결정: 수집 허용 확인과 중단 조건은 [ADR-0012](0012-public-collection-policy.md)와 [현행 플랫폼 정책](../PLATFORM_ACCESS.md)을 우선한다. 아래 원래 기록을 명시적 허가 미확인만으로 일괄 중지하는 규칙으로 사용하지 않는다. 호스트·일정 목표·격리·비용·가동 승인 경계는 유지한다.
 
 ## 사용자 확인과 승인 범위
 
