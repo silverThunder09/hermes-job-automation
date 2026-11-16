@@ -160,3 +160,98 @@ def test_read_only_store_refuses_writes_before_http(postgrest, posting, tmp_path
     with pytest.raises(RuntimeError, match="read-only"):
         store.save_posting(posting(), {"status": "review"})
     assert not postgrest.calls
+
+
+def canonical_row(item, key=None):
+    from hermes_job_automation.state import normalize_url
+    return dict(posting_key=key or posting_key(item), normalized_url=normalize_url(item.url),
+                platform=item.platform.lower(), platform_id=item.platform_id, company=item.company,
+                title=item.title, payload_json=item.to_dict(), eligibility_json={"status": "review"},
+                first_seen_at="2026-11-15T03:00:00+00:00", last_seen_at="2026-11-15T03:00:00+00:00")
+
+
+def test_canonical_lookup_uses_three_encoded_eq_queries_and_full_state(postgrest, posting, tmp_path):
+    from urllib.parse import parse_qs, urlsplit
+    item = posting()
+    row = canonical_row(item, "legacy:key")
+    evaluation = {"posting_key": "legacy:key", "evaluation_json": {"total": 70}, "updated_at": "fixture"}
+    application = {"posting_key": "legacy:key", "status": "submitted", "notes": {"memo": "preserve"},
+                   "attempt_id": None, "submitted_at": None, "confirmation_evidence": None, "updated_at": "fixture"}
+    postgrest.replies.extend([(200, [], {}), (200, [row], {}), (200, [row], {}),
+                             (200, [evaluation], {}), (200, [application], {})])
+    snapshot = create_state_store(settings(tmp_path)).lookup_posting_state(item)
+    assert snapshot == {"posting": row, "evaluation": evaluation, "application": application}
+    queries = [parse_qs(urlsplit(call[1]).query) for call in postgrest.calls]
+    assert queries[0]["posting_key"] == ['eq."' + posting_key(item) + '"']
+    assert queries[1]["normalized_url"] == ['eq."' + item.url + '"']
+    assert queries[2]["platform"] == ['eq."' + item.platform.lower() + '"']
+    assert queries[2]["platform_id"] == ['eq."123"']
+    assert all(call[0] == "GET" for call in postgrest.calls)
+    assert all(q["select"] == ["*"] and q["limit"] == ["2"] for q in queries)
+    assert queries[3]["posting_key"] == ['eq."legacy:key"']
+
+
+@pytest.mark.parametrize("case", ["multiple", "split", "wrong_predicate", "missing_column", "inconsistent", "bad_state_key"])
+def test_canonical_lookup_rejects_ambiguous_or_malformed_responses(postgrest, posting, tmp_path, case):
+    item = posting()
+    row = canonical_row(item)
+    other = dict(row, posting_key="different:key")
+    replies = [(200, [row], {}), (200, [row], {}), (200, [row], {}), (200, [], {}), (200, [], {})]
+    if case == "multiple":
+        replies[0] = (200, [row, row], {})
+    elif case == "split":
+        replies[1] = (200, [other], {})
+    elif case == "wrong_predicate":
+        replies[0] = (200, [other], {})
+    elif case == "missing_column":
+        del row["eligibility_json"]
+    elif case == "inconsistent":
+        replies[1] = (200, [dict(row, title="corrupted")], {})
+    else:
+        replies[3] = (200, [{"posting_key": "wrong:key", "evaluation_json": {}}], {})
+    postgrest.replies.extend(replies)
+    with pytest.raises(RuntimeError, match="canonical"):
+        create_state_store(settings(tmp_path)).lookup_posting_state(item)
+
+
+@pytest.mark.parametrize("changes", [{"platform_id": 'x),or.(true'}, {"platform": 'x"'},
+                                     {"url": "https://example.invalid/x?a=1&b=2"},
+                                     {"url": "https://example.invalid:synthetic-private-marker/path"},
+                                     {"platform_id": " 123"}, {"platform_id": "x\\y"}])
+def test_canonical_lookup_rejects_unsafe_literals_before_http(postgrest, posting, tmp_path, changes):
+    with pytest.raises(ValueError, match="canonical"):
+        create_state_store(settings(tmp_path)).lookup_posting_state(posting(**changes))
+    assert not postgrest.calls
+
+
+@pytest.mark.parametrize("table,field,value", [
+    ("evaluation", "updated_at", None), ("evaluation", "evaluation_json", []),
+    ("application", "notes", None), ("application", "status", "not-a-state"),
+    ("application", "attempt_id", {}), ("application", "updated_at", None),
+    ("posting", "company", "different-column"), ("posting", "platform_id", None),
+])
+def test_canonical_lookup_requires_complete_state_evidence(postgrest, posting, tmp_path, table, field, value):
+    item = posting()
+    row = canonical_row(item)
+    evaluation = {"posting_key": row["posting_key"], "evaluation_json": {}, "updated_at": "fixture"}
+    application = {"posting_key": row["posting_key"], "status": "submitted", "notes": {},
+                   "attempt_id": None, "submitted_at": None, "confirmation_evidence": None, "updated_at": "fixture"}
+    target = {"posting": row, "evaluation": evaluation, "application": application}[table]
+    if value is None:
+        del target[field]
+    else:
+        target[field] = value
+    postgrest.replies.extend([(200, [row], {})] * 3 + [(200, [evaluation], {}), (200, [application], {})])
+    with pytest.raises(RuntimeError, match="canonical"):
+        create_state_store(settings(tmp_path)).lookup_posting_state(item)
+
+
+@pytest.mark.parametrize("absent_index", [0, 1, 2])
+def test_canonical_lookup_rejects_missing_identity_that_should_match(postgrest, posting, tmp_path, absent_index):
+    item = posting()
+    row = canonical_row(item)
+    replies = [(200, [row], {})] * 3 + [(200, [], {}), (200, [], {})]
+    replies[absent_index] = (200, [], {})
+    postgrest.replies.extend(replies)
+    with pytest.raises(RuntimeError, match="canonical"):
+        create_state_store(settings(tmp_path)).lookup_posting_state(item)

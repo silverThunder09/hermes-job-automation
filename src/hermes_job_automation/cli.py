@@ -72,6 +72,12 @@ def main(argv=None) -> int:
     smoke.add_argument("--explicit-write", action="store_true", help="Explicitly authorize retaining a new storage sample.")
     smoke.add_argument("--file", help="Optional public-only JSON posting (company/title/url, optional platform/platform_id).")
     commands.add_parser("sources")
+    cloud_validate = commands.add_parser("cloud-validate", help="Validate bounded cloud collection JSON without credentials or writes.")
+    cloud_validate.add_argument("--file", required=True)
+    cloud_save = commands.add_parser("cloud-save", help="Save an approved cloud batch and retain a new verification receipt.")
+    cloud_save.add_argument("--file", required=True)
+    cloud_save.add_argument("--receipt", required=True, help="New receipt file; preserve attempts and uncertain outcomes.")
+    cloud_save.add_argument("--explicit-write", action="store_true")
     ocr = commands.add_parser("ocr-image", help="Extract a local image with review-required Windows OCR.")
     ocr.add_argument("--file", required=True)
     ocr.add_argument("--language", default="ko")
@@ -98,6 +104,33 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     if args.command == "state-smoke" and not args.explicit_write:
         parser.error("state-smoke requires --explicit-write; the public sample will be retained, not deleted.")
+    if args.command == "cloud-save" and not args.explicit_write:
+        parser.error("cloud-save requires --explicit-write; existing state must be preserved.")
+
+    if args.command in ("cloud-validate", "cloud-save"):
+        try:
+            from .cloud_collection import load_cloud_batch
+
+            source = Path(args.file).expanduser().resolve()
+            postings = load_cloud_batch(source)
+            if args.command == "cloud-validate":
+                _print({"status": "validated", "count": len(postings),
+                        "database_writes": 0, "collection_performed": False})
+            else:
+                from .cloud_collection import save_cloud_batch
+
+                receipt = Path(args.receipt).expanduser().resolve()
+                if receipt == source or receipt.exists():
+                    raise ValueError("Choose a new receipt path.")
+                result = save_cloud_batch(Settings.load(), source, explicit_write=True,
+                                          receipt_path=receipt)
+                _print(result)
+                return 0 if result.get("status") == "verified" else 1
+            return 0
+        except Exception as exc:
+            _print({"status": "error", "error": type(exc).__name__,
+                    "message": "Cloud collection operation failed; inspect input and retained receipt before any retry."})
+            return 1
 
     if args.command == "runtime-check":
         from .runtime_check import run_runtime_check

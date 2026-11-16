@@ -82,6 +82,81 @@ class SupabaseStateStore:
             raise StateStorageError("State storage returned an unexpected save response.")
         return result
 
+    def lookup_posting_state(self, posting: Posting) -> Optional[Dict[str, Any]]:
+        """Read one canonical posting plus complete evaluation/application records.
+
+        Three separate eq queries mirror the existing save RPC's unique identities.
+        This is not a transactional snapshot: inconsistent reads fail closed. No
+        first-row fallback, OR-expression interpolation or schema changes are used.
+        """
+        def literal(value):
+            if not isinstance(value, str) or not re.fullmatch(r"[\w:./%\-]{1,2048}", value):
+                raise ValueError("Invalid canonical lookup identity.")
+            return 'eq."' + value + '"'
+
+        # Validate originals BEFORE posting_key/normalize_url could repair them.
+        try:
+            for value in (posting.platform, posting.platform_id, posting.url):
+                literal(value)
+            filters = [{"posting_key": literal(posting_key(posting))},
+                       {"normalized_url": literal(normalize_url(posting.url))},
+                       {"platform": literal(posting.platform.lower()), "platform_id": literal(posting.platform_id)}]
+        except Exception:
+            raise ValueError("Invalid canonical lookup identity.") from None
+
+        def read(table, predicates):
+            query = dict(predicates, select="*", limit="2")
+            rows = self._request("/rest/v1/job_assist_" + table + "?" + urlencode(query))
+            if not isinstance(rows, list) or len(rows) > 1 or (rows and not isinstance(rows[0], dict)):
+                raise StateStorageError("State storage canonical lookup failed.")
+            row = rows[0] if rows else None
+            if row is not None:
+                for name, expected in predicates.items():
+                    if literal(row.get(name)) != expected:
+                        raise StateStorageError("State storage canonical lookup failed.")
+            return row
+
+        try:
+            matches = [read("postings", predicate) for predicate in filters]
+            found = [row for row in matches if row is not None]
+            if not found:
+                return None
+            row = found[0]
+            columns = {"posting_key", "normalized_url", "platform", "platform_id", "company", "title",
+                       "payload_json", "eligibility_json", "first_seen_at", "last_seen_at"}
+            if (set(row) != columns
+                    or any(json.dumps(other, sort_keys=True, allow_nan=False) != json.dumps(row, sort_keys=True, allow_nan=False) for other in found)
+                    or not isinstance(row["payload_json"], dict) or not isinstance(row["eligibility_json"], dict)
+                    or row["platform_id"] is not None and not isinstance(row["platform_id"], str)
+                    or any(not isinstance(row[name], str) or not row[name] for name in columns - {"platform_id", "payload_json", "eligibility_json"})):
+                raise StateStorageError("State storage canonical lookup failed.")
+            for match, predicates in zip(matches, filters):
+                should_match = all(isinstance(row.get(name), str) and literal(row[name]) == expected
+                                   for name, expected in predicates.items())
+                if (match is not None) != should_match:
+                    raise StateStorageError("State storage canonical lookup failed.")
+            if row["company"] != row["payload_json"].get("company") or row["title"] != row["payload_json"].get("title"):
+                raise StateStorageError("State storage canonical lookup failed.")
+            key_filter = {"posting_key": literal(row["posting_key"])}
+            evaluation = read("evaluations", key_filter)
+            application = read("applications", key_filter)
+            if evaluation is not None and (set(evaluation) != {"posting_key", "evaluation_json", "updated_at"}
+                    or not isinstance(evaluation["evaluation_json"], dict)
+                    or not isinstance(evaluation["updated_at"], str) or not evaluation["updated_at"]):
+                raise StateStorageError("State storage canonical lookup failed.")
+            if application is not None:
+                fields = {"posting_key", "status", "attempt_id", "submitted_at", "confirmation_evidence", "notes", "updated_at"}
+                if (set(application) != fields or not isinstance(application["notes"], dict)
+                        or application["status"] not in {"collected", "manual_review", "ready_for_approval", "submitting",
+                                                         "submitted", "unknown", "failed_before_submit"}
+                        or not isinstance(application["updated_at"], str) or not application["updated_at"]
+                        or any(application[name] is not None and not isinstance(application[name], str)
+                               for name in ("attempt_id", "submitted_at", "confirmation_evidence"))):
+                    raise StateStorageError("State storage canonical lookup failed.")
+            return {"posting": row, "evaluation": evaluation, "application": application}
+        except Exception:
+            raise StateStorageError("State storage canonical lookup failed.") from None
+
     def get_posting(self, key: str) -> Optional[Dict[str, Any]]:
         return self._get("postings", "payload_json", key)
 
