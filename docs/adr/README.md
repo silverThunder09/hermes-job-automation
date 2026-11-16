@@ -26,6 +26,7 @@
 | [0006](0006-actions-batch-boundary.md) | Accepted — 실행·격리 경계만 | 04시 Asia/Seoul GitHub 배치, 공개 개발/비공개 운영 분리. 인증 세부·자원 생성·가동은 별도 |
 | [0007](0007-remote-model-auth.md) | Proposed — 비교 이력 | GitHub environment Secret/App writer 후보의 이유·제약 보존. 현재 추가 비교·우선 후보는 0008, 기술 선택은 미승인 |
 | [0008](0008-supabase-auth-reuse.md) | Proposed | 기존 Supabase Vault 재사용 우선 검토. bootstrap·최소권한 접점·원격 갱신은 미선정/미구현·미승인 |
+| [0009](0009-scoped-auth-db-access.md) | Proposed | 0008의 접점·bootstrap 구체안: 전용 LOGIN role·shared session pooler·private repository Secret 조합 권고. 기술 채택·운영 변경 미승인 |
 | [0011](0011-private-collection-writer.md) | Accepted — 조건부 1회 검증 | PC-on/PC-off 공통 클라우드 브라우저/MCP 수집·Supabase 저장 분리, 사람인 API 경로 폐기. 구현·배포·예약은 미완료 |
 | [0012](0012-public-collection-policy.md) | Accepted — 수집 판정 정책 | 명시적 허가 미확인만으로 일괄 중지하지 않음. 적용되는 명시적 제한·접근 통제·사용자 승인·격리는 유지 |
 

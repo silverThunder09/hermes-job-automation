@@ -18,6 +18,8 @@ HARNESS = (
     "docs/OPERATIONS.md", "docs/CLOUD_DEVELOPMENT.md",
     "docs/adr/0007-remote-model-auth.md", "docs/REMOTE_AUTH_DESIGN.md",
     "docs/adr/0008-supabase-auth-reuse.md", "docs/SUPABASE_AUTH_DESIGN.md",
+    "docs/adr/0009-scoped-auth-db-access.md",
+    "supabase/prototypes/README.md",
     "docs/SUPABASE_STATE.md",
 )
 LINK = re.compile(r"\[[^\]]+\]\(([^\s)]+)\)")
@@ -194,3 +196,32 @@ def test_auth_routes_prefer_reuse_and_preserve_unapproved_alternative_history():
         path = ROOT / name
         header = path.read_text(encoding="utf-8").split("## ", 1)[0]
         assert any("0008-supabase-auth-reuse.md" in link for link in LINK.findall(header))
+
+
+def test_auth_access_candidate_is_reachable_without_adopting_it():
+    candidate = ROOT / "docs/adr/0009-scoped-auth-db-access.md"
+    assert candidate.is_file(), "Missing scoped authentication access proposal"
+    header = candidate.read_text(encoding="utf-8").split("## ", 1)[0]
+    assert "Proposed" in header
+    assert "Accepted" not in header and "Superseded" not in header
+    for source in (
+        ROOT / "docs/adr/README.md",
+        ROOT / "docs/adr/0008-supabase-auth-reuse.md",
+        ROOT / "docs/SUPABASE_AUTH_DESIGN.md",
+        INDEX,
+    ):
+        assert candidate.resolve() in {
+            (source.parent / urlsplit(target).path).resolve()
+            for target in links(source) if not urlsplit(target).scheme
+        }, "Missing conditional access proposal link from " + str(source.relative_to(ROOT))
+    runtime = section(INDEX.read_text(encoding="utf-8"), "Runtime")
+    row = next(line for line in runtime.splitlines() if line.startswith("| GPT 모델"))
+    assert LINK.findall(row)[0] == "../adr/0008-supabase-auth-reuse.md"
+
+
+def test_auth_access_tls_gate_proposal_documents_both_pooler_legs():
+    proposal = (ROOT / "docs/adr/0009-scoped-auth-db-access.md").read_text(encoding="utf-8")
+    criteria = section(proposal, "검증·완료 기준")
+    row = next(line for line in criteria.splitlines() if line.startswith("| TLS·접속"))
+    for boundary in ("runner→pooler", "pooler→DB", "SSL enforcement", "재시작", "별도 승인"):
+        assert boundary in row, "Missing TLS gate: " + boundary
