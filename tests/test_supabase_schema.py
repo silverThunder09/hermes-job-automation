@@ -165,3 +165,49 @@ def test_exact_posting_evaluation_run_roundtrip_and_finish_requires_claim(databa
     assert run["run_id"] == run_id
     assert run["status"] == "completed"
     assert run["report_json"] == report
+
+
+def test_cloud_writer_consumes_actual_postgres_wire_rows(database, tmp_path, postgrest,
+                                                        health_contract, state_settings):
+    """Feed measured SQL results through HTTP/production validation, not a live Supabase claim."""
+    from datetime import datetime, timezone
+    from hermes_job_automation.cloud_collection import save_cloud_batch
+    from hermes_job_automation.models import Posting
+    from hermes_job_automation.state import posting_key
+
+    identifier = str(uuid.uuid4().int)
+    stamp = "2026-11-15T03:00:00.120000+00:00"
+    item = Posting(platform="점핏", platform_id=identifier, company="합성 SQL 계약회사",
+                   title="Java 백엔드 신입", url="https://jumpit.saramin.co.kr/position/" + identifier,
+                   deadline="상시채용", location="서울", education="학력무관", experience="신입",
+                   employment_type="정규직", skills=["Java"], requirements="Java 백엔드 개발",
+                   source_kind="agent_researched_public", collected_at=stamp)
+    review = {"status": "review", "reasons": ["agent-researched", "user-review-pending"],
+              "missing_information": []}
+    source = tmp_path / "batch.json"
+    source.write_text(json.dumps({"schema_version": 1, "source": "jumpit_public_browser",
+                                 "collected_at": stamp, "postings": [item.to_dict()]},
+                                ensure_ascii=False), encoding="utf-8")
+    key = posting_key(item)
+    query = "select row_to_json(p) from public.job_assist_postings p where posting_key=" + sql_literal(key)
+    assert database(query).stdout.strip() == ""
+    health_contract()  # Bucket metadata is an HTTP fixture, not PostgreSQL storage.
+    postgrest.replies.extend([(200, [], {})] * 3)
+    args = [key, item.url, item.platform, identifier, json.dumps(item.to_dict()),
+            json.dumps(review), stamp]
+    save = "set role service_role; select public.job_assist_save_posting(" + ",".join(
+        sql_literal(value) for value in args) + ");"
+    for expected in ("t", "f"):
+        actual = database(save).stdout.strip()
+        assert actual == expected
+        row = json.loads(database(query).stdout)
+        assert row["first_seen_at"].endswith(".12+00:00")
+        postgrest.replies.append((200, actual == "t", {}))
+        postgrest.replies.extend([(200, [row], {})] * 3 + [(200, [], {})] * 2)
+    receipt = save_cloud_batch(state_settings, source, explicit_write=True,
+                              receipt_path=tmp_path / "receipt.json",
+                              now=datetime(2026, 11, 15, 3, 0, 1, tzinfo=timezone.utc))
+    assert receipt["status"] == "verified"
+    assert [attempt["result"] for attempt in receipt["attempts"]] == [True, False]
+    assert not postgrest.replies
+    assert json.loads(database(query).stdout)["payload_json"] == item.to_dict()

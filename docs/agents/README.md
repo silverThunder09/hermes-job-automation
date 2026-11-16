@@ -29,7 +29,7 @@
 
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
-| Supabase 설정·상태 조회/쓰기·SQL | [상태 저장소](../SUPABASE_STATE.md) | 구조 변경은 [ADR-0005](../adr/0005-supabase-postgres-only.md). 실제 DB 쓰기는 해당 대상 승인 후 |
+| Supabase 설정·상태 조회/쓰기·SQL | [상태 저장소](../SUPABASE_STATE.md) | 클라우드 결과만 검증/저장할 때는 [save-only 소비자](../SUPABASE_STATE.md#클라우드-수집-결과의-save-only-소비자)와 `cloud_collection.py`. 구조 변경은 [ADR-0005](../adr/0005-supabase-postgres-only.md). 실제 DB 쓰기는 해당 대상 승인 후 |
 | GPT 로그인 정보의 Supabase 재사용·권한 | [인증 전용 접근 경계](../SUPABASE_AUTH_DESIGN.md#access-boundary) | 업무 DB와 credential·외부 bootstrap을 구분. 현재 접점/권한은 미선정·운영 미구현이며 실제 DB/키 변경은 별도 승인 |
 | Google Sheets/Drive 연결 | [Google 설정](../GOOGLE_WORKSPACE_SETUP.md) | [운영 실행 단계](../OPERATIONS.md#실행-단계)의 `--execute` 외부 쓰기 경계 |
 | Telegram·실행 결과·로그 | [운영 가이드](../OPERATIONS.md) | 장애 기록이 필요할 때만 [실패 템플릿](../templates/run-failure.md) |
