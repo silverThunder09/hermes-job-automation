@@ -152,7 +152,7 @@ revoke all on all functions in schema job_auth_lab from public, job_auth_lab_cli
 grant execute on function job_auth_lab.snapshot(), job_auth_lab.begin_turn(uuid, bigint, bigint),
     job_auth_lab.stage_generation(uuid, bigint, bigint, bigint),
     job_auth_lab.block_turn(uuid, bigint, bigint) to job_auth_lab_client;
-alter default privileges for role postgres in schema job_auth_lab revoke execute on functions from public;
-alter default privileges for role job_auth_lab_owner in schema job_auth_lab revoke execute on functions from public;
+-- Schema-local default ACLs cannot remove global PUBLIC EXECUTE defaults.
+-- Explicitly revoke EXECUTE for every future facade function as above.
 -- No client finalize/reset/TTL takeover operation: real credential-value verification is absent.
 commit;

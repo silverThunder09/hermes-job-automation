@@ -46,60 +46,115 @@ def test_prototype_rejects_membership_into_owner_role_before_schema_ddl():
     assert source.index(guard) < source.index("create schema if not exists job_auth_lab_private")
 
 
+@pytest.mark.parametrize("endpoint", [
+    "npipe:////remote-host/pipe/docker_engine",
+    "unix://remote-host/docker.sock",
+    "tcp://127.0.0.1:2375",
+])
+def test_lab_rejects_remote_environment_before_any_docker_process(monkeypatch, endpoint):
+    monkeypatch.setitem(globals(), "CONTAINER", "hermes-job-auth-lab-1714a1e028fa")
+    monkeypatch.setenv("DOCKER_HOST", endpoint)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: pytest.fail("unvalidated Docker call"))
+    monkeypatch.setattr(subprocess, "Popen", lambda *a, **kw: pytest.fail("unvalidated Docker child"))
+    with pytest.raises(Exception, match="nonlocal_docker"):
+        lab.__wrapped__()
+
+
+@pytest.mark.parametrize("endpoint", [
+    "npipe:////remote-host/pipe/docker_engine", "unix://remote-host/docker.sock",
+])
+def test_lab_rejects_remote_context_before_inspection_or_mutation(monkeypatch, endpoint):
+    api = controller()
+    calls = []
+
+    def inspect_context(self, args):
+        calls.append(args)
+        assert args == ["context", "inspect", "--format", "{{.Endpoints.docker.Host}}"]
+        return endpoint
+
+    monkeypatch.setitem(globals(), "CONTAINER", "hermes-job-auth-lab-1714a1e028fa")
+    monkeypatch.setitem(globals(), "controller", lambda: api)
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
+    monkeypatch.delenv("DOCKER_CONTEXT", raising=False)
+    monkeypatch.setattr(api["DockerLabStore"], "_run", inspect_context)
+    monkeypatch.setattr(subprocess, "run", lambda *a, **kw: pytest.fail("unvalidated Docker call"))
+    with pytest.raises(Exception, match="nonlocal_docker"):
+        lab.__wrapped__()
+    assert len(calls) == 1
+
+
+def test_lab_pins_validated_endpoint_id_and_clean_environment_for_all_sql(monkeypatch):
+    api = controller()
+    endpoint = "npipe:////./pipe/docker_engine"
+    container_id = "b" * 64
+    metadata = {"id": container_id, "image": "postgres:16", "label": "true",
+                "network": "none", "running": True, "privileged": False,
+                "ports": {}, "bindings": {}, "binds": 0,
+                "mounts": [{"type": "volume", "name": "a" * 64,
+                            "destination": "/var/lib/postgresql/data", "driver": "local",
+                            "rw": True, "mode": "", "propagation": ""}]}
+    replies = [endpoint, json.dumps(metadata),
+               json.dumps({"driver": "local", "scope": "local", "options": {}})]
+    monkeypatch.setitem(globals(), "CONTAINER", "hermes-job-auth-lab-1714a1e028fa")
+    monkeypatch.setitem(globals(), "controller", lambda: api)
+    monkeypatch.delenv("DOCKER_HOST", raising=False)
+    monkeypatch.delenv("DOCKER_CONTEXT", raising=False)
+    monkeypatch.setenv("PGHOST", "remote.invalid")
+    monkeypatch.setenv("PGSERVICE", "untrusted-service")
+    monkeypatch.setattr(api["DockerLabStore"], "_run", lambda self, args: replies.pop(0))
+    calls = []
+
+    def run(args, **kwargs):
+        calls.append((args, kwargs))
+        assert args[:3] == ["docker", "--host", endpoint]
+        assert container_id in args and CONTAINER not in args
+        assert "/usr/bin/env" in args and "-i" in args
+        assert args[args.index("-h") + 1] == "/var/run/postgresql"
+        assert "-X" in args and "-w" in args
+        assert not {"DOCKER_HOST", "DOCKER_CONTEXT", "PGHOST", "PGSERVICE"} & kwargs["env"].keys()
+        monkeypatch.setenv("DOCKER_HOST", "npipe:////remote-host/pipe/docker_engine")
+        monkeypatch.setenv("DOCKER_CONTEXT", "untrusted-context")
+        return SimpleNamespace(returncode=0, stderr="", stdout=(
+            "160000" if "SHOW server_version_num" in kwargs.get("input", "") else ""))
+
+    monkeypatch.setattr(subprocess, "run", run)
+    target = lab.__wrapped__()
+    target.run("SELECT 1;")
+    assert not replies and len(calls) >= 5
+    assert target.command == ("docker", "--host", endpoint)
+    assert target.cli_environment["DOCKER_HOST"] == endpoint
+    assert "DOCKER_CONTEXT" not in target.cli_environment
+
+
 @pytest.fixture(scope="module")
 def lab():
     if not CONTAINER:
         pytest.skip("opt-in isolated auth PostgreSQL lab not specified")
-    host = os.getenv("DOCKER_HOST", "")
-    assert not host or host.startswith(("unix:", "npipe:")), "Refuse remote Docker host"
-    context = subprocess.run(
-        ["docker", "context", "inspect", "--format", "{{.Endpoints.docker.Host}}"],
-        check=True, capture_output=True, text=True, timeout=30,
-    ).stdout.strip()
-    assert context.startswith(("unix:", "npipe:")), "Refuse non-local Docker context"
-    info = json.loads(subprocess.run(
-        ["docker", "inspect", CONTAINER], check=True, capture_output=True, text=True, timeout=30,
-    ).stdout)[0]
-    container_id = info.get("Id", "")
-    assert len(container_id) == 64 and all(char in "0123456789abcdef" for char in container_id)
-    assert info["HostConfig"]["NetworkMode"] == "none"
-    assert not info["HostConfig"].get("PortBindings")
-    assert info["Config"]["Labels"].get("com.hermes.job.auth-lab") == "true"
-    assert info["Config"].get("Image") == "postgres:16"
-    assert all(mount["Type"] != "bind" for mount in info.get("Mounts", []))
-    mounts = info.get("Mounts", [])
-    assert len(mounts) == 1
-    mount = mounts[0]
-    assert (mount.get("Type"), mount.get("Destination"), mount.get("Driver"), mount.get("RW"),
-            mount.get("Mode"), mount.get("Propagation")) == (
-                "volume", "/var/lib/postgresql/data", "local", True, "", "")
-    volume_name = mount.get("Name", "")
-    assert len(volume_name) == 64 and all(char in "0123456789abcdef" for char in volume_name)
-    volume_format = '{"driver":{{json .Driver}},"scope":{{json .Scope}},"options":{{json .Options}}}'
-    volume = json.loads(subprocess.run(
-        ["docker", "volume", "inspect", "--format", volume_format, volume_name],
-        check=True, capture_output=True, text=True, timeout=30,
-    ).stdout)
-    assert (volume["driver"] == "local" and volume["scope"] == "local"
-            and volume["options"] in (None, {}))
-    server_version = subprocess.run(
-        ["docker", "exec", container_id, "psql", "-U", "postgres", "-d", "postgres",
-         "-X", "-q", "-t", "-A", "-c", "SHOW server_version_num;"],
-        check=True, capture_output=True, text=True, timeout=30,
-    ).stdout.strip()
-    assert server_version.isdecimal() and 160000 <= int(server_version) < 170000
     name = "job_auth_test_" + uuid.uuid4().hex
+    # Share the controller's strict local endpoint, container and volume checks.
+    # Construction only inspects; pin its validated target before any SQL/DDL.
+    target = controller()["DockerLabStore"](CONTAINER, name)
+    command = ("docker", "--host", target._host)
+    environment = dict(target._environment)
+    container_id = target._container_id
+    psql = (*command, "exec", "-i", container_id,
+            "/usr/bin/env", "-i", "PATH=/usr/bin:/bin", "LC_ALL=C", "HOME=/nonexistent",
+            "PGPASSFILE=/dev/null", "PGSERVICEFILE=/dev/null", "PGSYSCONFDIR=/nonexistent",
+            "PGCONNECT_TIMEOUT=5", "/usr/lib/postgresql/16/bin/psql",
+            "-X", "-w", "-h", "/var/run/postgresql", "-p", "5432")
 
     def run(sql, user="postgres", database=name, check=True):
         result = subprocess.run(
-            ["docker", "exec", "-i", container_id, "psql", "-U", user, "-d", database,
+            [*psql, "-U", user, "-d", database,
              "-X", "-q", "-t", "-A", "-v", "ON_ERROR_STOP=1"],
-            input=sql, encoding="utf-8", capture_output=True, timeout=30,
+            input=sql, encoding="utf-8", capture_output=True, timeout=30, env=environment,
         )
         if check:
             assert result.returncode == 0, result.stderr
         return result
 
+    server_version = run("SHOW server_version_num;", database="postgres").stdout.strip()
+    assert server_version.isdecimal() and 160000 <= int(server_version) < 170000
     run("CREATE DATABASE " + name + ";", database="postgres")
     run("""DO $$ BEGIN
         IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname='job_auth_lab_outsider') THEN
@@ -113,7 +168,10 @@ def lab():
     source = PROTOTYPE.read_text(encoding="utf-8")
     run(source)
     run(source)
-    return SimpleNamespace(run=run, source=source, name=name, container_id=container_id)
+    cli_environment = dict(environment, DOCKER_HOST=target._host)
+    return SimpleNamespace(run=run, source=source, name=name, container_id=container_id,
+                           command=command, psql=psql, environment=environment,
+                           cli_environment=cli_environment)
 
 
 @pytest.fixture
@@ -261,11 +319,13 @@ def test_lab_stores_only_control_metadata_not_an_oauth_bundle(fresh):
 def test_committed_marker_survives_restart_of_the_isolated_lab(fresh):
     owner = str(uuid.uuid4())
     fresh.run(begin(owner), user=CLIENT)
-    subprocess.run(["docker", "restart", "-t", "1", fresh.container_id], check=True,
-                   capture_output=True, timeout=30)
+    subprocess.run([*fresh.command, "restart", "-t", "1", fresh.container_id], check=True,
+                   capture_output=True, timeout=30, env=fresh.environment)
     for _ in range(30):
-        ready = subprocess.run(["docker", "exec", fresh.container_id, "pg_isready", "-U", "postgres"],
-                               capture_output=True, timeout=10)
+        ready = subprocess.run([*fresh.command, "exec", fresh.container_id,
+                                "/usr/bin/env", "-i", "PATH=/usr/bin:/bin",
+                                "pg_isready", "-h", "/var/run/postgresql", "-U", "postgres"],
+                               capture_output=True, timeout=10, env=fresh.environment)
         if ready.returncode == 0:
             break
         time.sleep(0.2)
@@ -334,7 +394,7 @@ def controller():
 
 def test_controller_runs_work_only_after_real_committed_marker(fresh):
     api = controller()
-    store = api["DockerLabStore"](CONTAINER, fresh.name)
+    store = api["DockerLabStore"](fresh.container_id, fresh.name)
     calls = []
 
     def work(generation):
@@ -354,7 +414,7 @@ def test_controller_runs_work_only_after_real_committed_marker(fresh):
 
 def test_controller_work_failure_blocks_real_sql_without_replay(fresh):
     api = controller()
-    store = api["DockerLabStore"](CONTAINER, fresh.name)
+    store = api["DockerLabStore"](fresh.container_id, fresh.name)
     calls = []
 
     def fail(_):
@@ -377,7 +437,7 @@ def test_controller_lost_claim_ack_preserves_real_barrier_without_work(fresh):
             raise api["LabError"]("claim_uncertain")
 
     with pytest.raises(api["LabError"]):
-        api["run_once"](LostAck(CONTAINER, fresh.name), lambda _: pytest.fail("no work"))
+        api["run_once"](LostAck(fresh.container_id, fresh.name), lambda _: pytest.fail("no work"))
     assert snapshot(fresh)["state"] == "in_flight"
 
 
@@ -390,23 +450,43 @@ def test_controller_lost_stage_ack_preserves_real_pending_result(fresh):
             raise api["LabError"]("stage_uncertain")
 
     with pytest.raises(api["LabError"]):
-        api["run_once"](LostAck(CONTAINER, fresh.name))
+        api["run_once"](LostAck(fresh.container_id, fresh.name))
     state = snapshot(fresh)
     assert (state["state"], state["version"], state["fixture_generation"]) == ("pending_validation", 1, 1)
     with pytest.raises(api["LabError"]):
-        api["run_once"](api["DockerLabStore"](CONTAINER, fresh.name))
+        api["run_once"](api["DockerLabStore"](fresh.container_id, fresh.name))
     assert snapshot(fresh) == state
+
+
+def test_cli_harness_passes_original_immutable_id_before_starting_child(monkeypatch):
+    class PinnedCommand(Exception):
+        pass
+
+    original_id = "b" * 64
+    monkeypatch.setitem(globals(), "CONTAINER", "hermes-job-auth-lab-1714a1e028fa")
+    target = SimpleNamespace(name="job_auth_test_" + "a" * 32,
+                             container_id=original_id, cli_environment={})
+
+    def inspect_command(args, **kwargs):
+        assert args[args.index("--container") + 1] == original_id
+        raise PinnedCommand
+
+    monkeypatch.setattr(subprocess, "run", inspect_command)
+    with pytest.raises(PinnedCommand):
+        test_controller_cli_executes_real_sql_once_and_refuses_second_run(target)
 
 
 def test_controller_cli_executes_real_sql_once_and_refuses_second_run(fresh):
     command = [sys.executable, str(ROOT / "scripts/auth_control_lab.py"),
-               "--container", CONTAINER, "--database", fresh.name]
-    result = subprocess.run(command, text=True, encoding="utf-8", capture_output=True, timeout=90)
+               "--container", fresh.container_id, "--database", fresh.name]
+    result = subprocess.run(command, text=True, encoding="utf-8", capture_output=True,
+                            timeout=90, env=fresh.cli_environment)
     assert result.returncode == 0, result.stdout
     report = json.loads(result.stdout)
     assert report["status"] == "verified_local_metadata"
     assert report["state"] == snapshot(fresh)["state"] == "pending_validation"
-    again = subprocess.run(command, text=True, encoding="utf-8", capture_output=True, timeout=90)
+    again = subprocess.run(command, text=True, encoding="utf-8", capture_output=True,
+                           timeout=90, env=fresh.cli_environment)
     assert again.returncode == 1
     assert json.loads(again.stdout)["code"] == "not_ready"
     assert snapshot(fresh)["version"] == 1
@@ -415,17 +495,18 @@ def test_controller_cli_executes_real_sql_once_and_refuses_second_run(fresh):
 @pytest.mark.parametrize("row_lock", [True, False], ids=["row-lock", "long-statement"])
 def test_controller_server_deadlines_leave_no_background_backend(fresh, row_lock):
     api = controller()
-    store = api["DockerLabStore"](CONTAINER, fresh.name)
+    store = api["DockerLabStore"](fresh.container_id, fresh.name)
     store._TIMEOUT = 7  # Faster outer fallback; server deadlines must win.
     holder = None
     try:
         if row_lock:
             holder = subprocess.Popen(
-                ["docker", "exec", "-e", "PGAPPNAME=job-auth-lock-holder", fresh.container_id,
-                 "psql", "-U", "postgres", "-d", fresh.name, "-X", "-q", "-t", "-A",
-                 "-v", "ON_ERROR_STOP=1", "-c", "BEGIN; SELECT singleton FROM "
+                [*fresh.psql, "-U", "postgres", "-d", fresh.name, "-X", "-q", "-t", "-A",
+                 "-v", "ON_ERROR_STOP=1", "-c", "SET application_name='job-auth-lock-holder'; "
+                 "BEGIN; SELECT singleton FROM "
                  "job_auth_lab_private.control FOR UPDATE; SELECT pg_sleep(25); ROLLBACK;"],
                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                env=dict(fresh.environment),
             )
             for _ in range(40):
                 locked = fresh.run("SELECT count(*) FROM pg_stat_activity WHERE "

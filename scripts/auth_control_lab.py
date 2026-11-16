@@ -19,13 +19,14 @@ _BIGINT_MAX = (1 << 63) - 1
 _SCOPE = {"local_metadata_only": True, "vault_verified": False,
           "oauth_verified": False, "provider_called": False}
 _CONTAINER = re.compile(r"hermes-job-auth-lab-[0-9a-f]{12}")
+_CONTAINER_ID = re.compile(r"[0-9a-f]{64}")
 _DATABASE = re.compile(r"job_auth_test_[0-9a-f]{32}")
 _FIELDS = {"state", "version", "fixture_generation", "epoch", "owner"}
 _ERROR_CODES = frozenset({
     "invalid_arguments", "invalid_metadata", "not_ready", "claim_uncertain",
     "barrier_failed", "work_failed", "invalid_generation", "stage_uncertain",
     "validation_failed", "invalid_target", "nonlocal_docker", "docker_failed",
-    "unsafe_container", "invalid_sql_value", "invalid_response", "interrupted",
+    "unsafe_container", "invalid_sql_value", "invalid_response", "interrupted", "target_changed",
 })
 
 
@@ -212,7 +213,8 @@ class DockerLabStore:
     _OUTPUT_LIMIT = 32768
 
     def __init__(self, container: str, database: str) -> None:
-        if (type(container) is not str or not _CONTAINER.fullmatch(container)
+        by_id = type(container) is str and _CONTAINER_ID.fullmatch(container) is not None
+        if (type(container) is not str or not (by_id or _CONTAINER.fullmatch(container))
                 or type(database) is not str or not _DATABASE.fullmatch(database)):
             raise LabError("invalid_target")
         host = os.environ.get("DOCKER_HOST")
@@ -236,6 +238,9 @@ class DockerLabStore:
             "--host", host, "inspect", "--type", "container", "--format", _INSPECT, container
         ]))
         self._check_container(metadata)
+        # A caller that already inspected a lab must not rediscover it by name.
+        if by_id and metadata["id"] != container:
+            raise LabError("target_changed")
         volume = _json(self._run([
             "--host", host, "volume", "inspect", "--format", _VOLUME_INSPECT,
             metadata["mounts"][0]["name"],
@@ -259,7 +264,7 @@ class DockerLabStore:
                   "ports", "bindings", "mounts", "binds"}
         if type(metadata) is not dict or set(metadata) != fields:
             raise LabError("unsafe_container")
-        if (type(metadata["id"]) is not str or not re.fullmatch(r"[0-9a-f]{64}", metadata["id"])
+        if (type(metadata["id"]) is not str or not _CONTAINER_ID.fullmatch(metadata["id"])
                 or metadata["image"] != "postgres:16" or metadata["label"] != "true"
                 or metadata["network"] != "none" or metadata["running"] is not True
                 or metadata["privileged"] is not False):

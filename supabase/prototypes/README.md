@@ -8,7 +8,7 @@
 
 - 제한된 NOLOGIN 함수 owner와 별도 비관리 LOGIN caller를 사용한다. **비밀번호는 NULL인 테스트 계정**이며 socket trust 인증만 사용한다. 기존 lab role에 비밀번호가 있으면 NULL 여부만 확인해 중단하고 기존 값을 변경하지 않는다. 비밀번호 원문·verifier는 출력하지 않는다.
 - caller는 facade schema USAGE와 고정 함수 네 개의 EXECUTE만 추가 부여받는다. private 제어 테이블과 합성 업무 sentinel의 직접 읽기/쓰기, owner/postgres로 SET ROLE, facade 객체 생성이 거부되는지 검사한다.
-- 함수는 별도 owner의 SECURITY DEFINER, 빈 search_path, 완전 수식 테이블 이름으로 동작한다. PUBLIC EXECUTE와 향후 기본 EXECUTE도 facade 범위에서 회수한다.
+- 함수는 별도 owner의 SECURITY DEFINER, 빈 search_path, 완전 수식 테이블 이름으로 동작한다. 현재 네 함수의 PUBLIC EXECUTE를 명시적으로 회수한다. schema 단위 기본 ACL 회수는 전역 PUBLIC EXECUTE 기본값을 제거하지 못하므로, 향후 추가 함수에도 명시적 REVOKE가 필요하다. 전역 기본 권한을 변경하지 않는다.
 - 고정 singleton의 상태·owner·version·epoch·**합성 정수 generation**만 저장한다. SQL 안에 비밀값·비밀번호·OAuth bundle·Vault 대체 테이블은 없다.
 - `begin_turn`은 ready 행을 원자적으로 claim하고 `in_flight`를 남긴다. 여러 동시 요청에서 하나만 성공한다.
 - `stage_generation`은 같은 owner/version/epoch일 때 합성 generation과 version을 한 transaction에서 갱신하며 `pending_validation`을 유지한다.
@@ -25,6 +25,7 @@
 - 허용 mount는 `/var/lib/postgresql/data`의 Docker 관리 익명 local volume 하나뿐이다. 다른 경로·mount 유형·custom volume 옵션은 거부한다.
 - 명시적인 `com.hermes.job.auth-lab=true` label.
 - `JOB_ASSIST_TEST_AUTH_CONTAINER`로 지정하며 원격 Docker host/context는 거부한다.
+- 테스트 harness도 controller의 동일한 로컬 endpoint·컨테이너/volume 검사를 재사용한다. 검사한 endpoint와 immutable container ID를 SQL·재시작·잠금 검사·controller 생성·CLI 자식에 고정하고 host/context·동일 이름 변경을 재참조하지 않는다. host·컨테이너의 PostgreSQL 환경을 정제하고 psql은 고정 Unix socket만 사용한다.
 - 컨테이너·이미지 다운로드를 테스트가 자동 수행하지 않는다. 필요한 이미지는 이미 설치된 PostgreSQL 16을 재사용한다.
 - 고유 테스트 DB를 만들며 기존 DB나 테스트 결과를 삭제하지 않는다. 마지막 테스트는 **지정된 격리 lab만 재시작**해 commit된 marker의 유지도 확인한다. 해당 컨테이너에 다른 작업을 같이 넣지 않는다.
 
@@ -46,7 +47,7 @@ controller는 ready snapshot → claim → 별도 연결의 정확한 owner/vers
 python scripts/auth_control_lab.py --container <전용 lab 이름> --database <이미 설치된 job_auth_test_32hex DB>
 ```
 
-입력은 위 두 개의 엄격한 lab 식별자뿐이다. 실행 중 로컬 Docker endpoint와 immutable container ID를 고정하고, 최소 inspect metadata·격리 조건을 확인한다. host/container의 외부 접속·서비스·비밀번호 환경 우회는 차단하며 출력·오류·시간 제한을 둔다. 실제 비밀을 입력하지 않는다.
+입력은 위 두 개의 엄격한 lab 식별자뿐이다. `--container`는 전용 lab 이름 또는 미리 검증한 64자리 소문자 hex immutable ID를 받는다. 사전 검증한 대상에서 이어 실행할 때는 이름 대신 ID를 전달한다. ID 입력은 재조회 metadata의 ID 일치를 SQL 실행 전에 확인하며 다르면 `target_changed`로 거부한다. ID를 입력해도 label·network·volume 등 전체 격리 검사를 생략하지 않는다. 실행 중 로컬 Docker endpoint와 immutable container ID를 고정하고, 최소 inspect metadata·격리 조건을 확인한다. host/container의 외부 접속·서비스·비밀번호 환경 우회는 차단하며 출력·오류·시간 제한을 둔다. 실제 비밀을 입력하지 않는다.
 
 Docker CLI를 종료해도 컨테이너 안의 쿼리는 남을 수 있으므로, 정제된 psql 환경에 고정 `PGOPTIONS=-c statement_timeout=4000 -c lock_timeout=2000`을 적용한다. 서버 쿼리 4초·잠금 대기 2초는 바깥 Docker CLI 제한 15초보다 짧다. 실제 행 잠금과 장시간 쿼리 테스트에서 오류 반환 후 해당 lab DB의 비관리 client backend가 0개이고 상태가 ready 그대로임을 확인한다. 이 제한은 운영 Supabase 설정 변경이 아니다.
 

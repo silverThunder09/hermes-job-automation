@@ -193,7 +193,8 @@ LAB_DATABASE = "job_auth_test_" + "a" * 32
 LAB_ID = "b" * 64
 
 
-def adapter_double(api, monkeypatch, volume_info=None, **overrides):
+def adapter_double(api, monkeypatch, volume_info=None, selector=LAB_CONTAINER,
+                   factory=None, **overrides):
     metadata = {"id": LAB_ID, "image": "postgres:16", "label": "true",
                 "network": "none", "running": True, "privileged": False,
                 "ports": {}, "bindings": {}, "binds": 0,
@@ -215,7 +216,39 @@ def adapter_double(api, monkeypatch, volume_info=None, **overrides):
     monkeypatch.delenv("DOCKER_HOST", raising=False)
     monkeypatch.delenv("DOCKER_CONTEXT", raising=False)
     monkeypatch.setattr(api["DockerLabStore"], "_run", command)
-    return api["DockerLabStore"](LAB_CONTAINER, LAB_DATABASE), calls, responses
+    factory = api["DockerLabStore"] if factory is None else factory
+    return factory(selector, LAB_DATABASE), calls, responses
+
+
+def test_adapter_accepts_and_pins_an_explicit_immutable_id(api, monkeypatch):
+    store, calls, responses = adapter_double(api, monkeypatch, selector=LAB_ID)
+    assert store._container_id == LAB_ID
+    assert calls[1][-1] == LAB_ID
+    assert not responses
+
+
+def test_cli_rejects_replacement_lab_id_before_any_sql(api, monkeypatch, capsys):
+    monkeypatch.setattr(api["DockerLabStore"], "_sql",
+                        lambda *a, **kw: pytest.fail("SQL before expected ID validation"))
+
+    def cli(container, database):
+        return api["main"](["--container", container, "--database", database])
+
+    code, calls, responses = adapter_double(
+        api, monkeypatch, selector=LAB_ID, factory=cli, id="c" * 64)
+    assert code == 1
+    assert json.loads(capsys.readouterr().out)["code"] == "target_changed"
+    assert len(calls) == 2  # Context/container inspection only, no volume lookup or SQL.
+    assert len(responses) == 1
+
+
+@pytest.mark.parametrize("selector", ["b" * 63, "b" * 65, "B" * 64, "-" + "b" * 63])
+def test_cli_invalid_immutable_id_never_spawns_or_echoes(api, monkeypatch, capsys, selector):
+    monkeypatch.setattr(api["subprocess"], "Popen", lambda *a, **kw: pytest.fail("no child"))
+    assert api["main"](["--container", selector, "--database", LAB_DATABASE]) == 2
+    output = capsys.readouterr().out
+    assert json.loads(output)["code"] == "invalid_target"
+    assert selector not in output
 
 
 def test_adapter_pins_local_endpoint_and_immutable_id_and_uses_fixed_socket_role(api, monkeypatch):

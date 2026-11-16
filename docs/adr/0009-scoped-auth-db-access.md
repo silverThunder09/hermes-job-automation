@@ -3,8 +3,8 @@
 - 기록일: 2026-11-11
 - 결정 상태: **Proposed — 사용자 기술 선택 전**
 - 구현/배포/검증 상태: 문서와 [격리 로컬 SQL 프로토타입](../../supabase/prototypes/README.md)을 검증한다. 프로토타입은 비밀 없는 제어 메타데이터·권한·동시성만 다룬다. 운영 SQL·adapter·실사용 DB 접속·Secret·로그인·모델 호출·예약은 **미구현·미배포·미실행**.
-- 연결 이슈/PR: [Issue #24](https://github.com/silverThunder09/hermes-job-automation/issues/24), [Draft PR #25](https://github.com/silverThunder09/hermes-job-automation/pull/25).
-- 2026-11-15 상태 확인: PR #25는 Open/Draft이며 미병합입니다. 공개 개발 기록으로 연결됐지만 운영 적용·배포를 뜻하지 않습니다.
+- 연결 이슈/PR: [Issue #24](https://github.com/silverThunder09/hermes-job-automation/issues/24), [PR #25](https://github.com/silverThunder09/hermes-job-automation/pull/25).
+- 공개 개발 기록: PR #25는 처음 Draft로 게시됐습니다. 최신 검증·병합 상태는 연결된 PR에서 확인합니다. 프로토타입의 검증·병합도 운영 기술 채택·Supabase 적용·배포를 뜻하지 않습니다.
 - 선행 관계: [ADR-0008](0008-supabase-auth-reuse.md)의 우선 후보를 구체화한다. 0007·0008을 대체하거나 채택하지 않는다. [ADR-0006](0006-actions-batch-boundary.md)의 공개 개발/비공개 운영 분리는 유지한다.
 
 ## 배경과 요구사항

@@ -113,6 +113,25 @@ assert store.get_application(key)["notes"] == {}
 
 승인된 단일 저장소 전환에서 운영자는 기존 `.env`의 backend 값만 `supabase`로 변경하고 다른 설정/키를 보존해야 합니다. 이 문서의 명령은 환경 값을 강제로 덮어쓰지 않습니다. 실제 설정의 **live health → 별도 승인된 live smoke → 정확한 read-back**을 확인해야 합니다. SQLite 기존 데이터는 자동 복사/동기화하지 않습니다. `run`/`finalize`는 `--execute` 여부와 별개로 Supabase 상태 DB에는 씁니다(`--execute`는 Google/Telegram 경계). 네트워크가 없으면 상태 저장을 완료할 수 없습니다.
 
+## 클라우드 수집 결과의 save-only 소비자
+
+[ADR-0011](adr/0011-private-collection-writer.md)의 writer seam은 브라우저·수집기·모델을 실행하지 않고 이미 수집한 공개 공고 JSON만 검증/저장합니다. 사람인 API를 호출하거나 승인·키를 요구하지 않습니다. 이 소비자의 구현은 원격 검색·job 분리·Secrets 등록·예약 가동의 완료가 아닙니다.
+
+```bash
+# 설정/자격 증명을 읽지 않는 입력 검증. DB 쓰기와 사이트 요청 없음.
+PYTHONPATH=src python -m hermes_job_automation cloud-validate --file approved-cloud-batch.json
+# 승인된 실제 공고만 저장. 새 receipt 경로가 필요하며 DB에는 실제로 씁니다.
+PYTHONPATH=src python -m hermes_job_automation cloud-save --file approved-cloud-batch.json --receipt new-cloud-receipt.json --explicit-write
+```
+
+입력은 256 KiB 이하 strict UTF-8 JSON 객체이며 최상위 필드는 `schema_version: 1`, `source: jumpit_public_browser`, UTC `collected_at`, `postings`뿐입니다. `postings`는 모든 `Posting` 필드를 가진 1~10개 객체입니다. 출처는 `agent_researched_public`, 플랫폼은 `점핏`, URL은 원문 십진 ID와 일치하는 `https://jumpit.saramin.co.kr/position/<ID>`만 허용합니다. 임의 URL·query·fragment·명령·자격 증명·평가/지원 상태 입력은 거부합니다. 수집 시각은 각 공고와 일치해야 하며 미래 또는 24시간이 지난 입력은 거부합니다. 이는 처리 유효기간 검사이지 보존/삭제 정책 변경이 아닙니다.
+
+모든 입력의 명시된 학력·경력·지역·고용형태·모집 상태·Java 또는 Spring 백엔드 조건을 먼저 확인합니다. 미확인·충돌·부적합 행이 있으면 전체 입력을 거부하고 부분 쓰기를 시작하지 않습니다. 이 검사 자체가 공고 원문을 새로 조사하거나 진실성을 보증하지 않으므로 출처 대조와 수집 허용 범위 확인은 별도로 필요합니다. 통과한 신규 행도 적격성 JSON은 `review`/`user-review-pending`으로 저장하며 지원 상태를 만들지 않습니다.
+
+`cloud-save`는 명시쓰기 승인·전체 입력 검증·새 receipt 확보 후 기존 factory/health를 사용합니다. 세 식별자로 canonical 행과 기존 평가/지원 상태·메모를 조회하고, 쓰기는 기존 원자적 `save_posting` RPC만 사용합니다. 동일 데이터 두 번째 저장이 False이며 정확한 원문/적격성/기존 상태가 보존되어야 `verified`/종료 코드 0입니다. 기존 DB 원자성을 클라이언트 조회로 대체하지 않습니다.
+
+매 쓰기 전 receipt에 최소 식별자와 시도를 기록하며 기존 파일은 덮어쓰지 않습니다. 불확실한 응답은 정확한 행으로 재조회하지만 추가 저장을 재시도하지 않습니다. 존재만 재확인한 경우 `reconciled`, 검증 불가능/일부 처리 후 실패는 `unknown`, 시도 기록 전 health/조회 실패는 `failed`이며 모두 종료 코드 1입니다. 시도 기록 뒤 checkpoint 저장이 실패하면 실제 원격 요청 전이더라도 보수적으로 `unknown`으로 남깁니다. 중단된 `pending`도 성공이 아닙니다. receipt와 원래 입력을 보존해 조정하고 새 receipt로 무작정 재실행하지 마세요. 키·HTTP body·공고 본문·기존 메모는 receipt나 오류 메시지에 넣지 않습니다.
+
 ## 데이터 보존과 동시성
 
 - 신규 공고는 `posting_key`, normalized URL, `(platform, platform_id)` 각각 unique 제약으로 서버에서 원자적 중복 판정합니다. 클라이언트 read-then-write가 아닙니다. 기존 두 행을 서로 연결하는 모순된 식별자는 자동 병합하지 않고 실패시킵니다.
