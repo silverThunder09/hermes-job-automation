@@ -92,7 +92,8 @@ class SupabaseStateStore:
         def literal(value):
             if not isinstance(value, str) or not re.fullmatch(r"[\w:./%\-]{1,2048}", value):
                 raise ValueError("Invalid canonical lookup identity.")
-            return 'eq."' + value + '"'
+            # Scalar eq treats added quotes as data; urlencode handles transport.
+            return "eq." + value
 
         # Validate originals BEFORE posting_key/normalize_url could repair them.
         try:

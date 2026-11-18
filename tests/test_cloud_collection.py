@@ -197,6 +197,14 @@ def test_save_new_row_exact_readback_second_false_and_durable_attempts(tmp_path,
     assert posts[0][3]["p_payload"] == batch_data()["postings"][0]
     assert posts[0][3]["p_eligibility"] == REVIEW
     assert posts[1][3] == posts[0][3]
+    from urllib.parse import parse_qs, urlsplit
+    expected = stored_row()
+    for method, path, _, _ in postgrest.calls:
+        if method == "GET":
+            query = parse_qs(urlsplit(path).query)
+            for field in ("posting_key", "normalized_url", "platform", "platform_id"):
+                if field in query:
+                    assert query[field] == ["eq." + expected[field]]
     assert not postgrest.replies
     text = receipt_path.read_text(encoding="utf-8")
     assert all(value not in text for value in ["합성 계약회사", "Java", "sb_secret", "requirements", "notes"])
