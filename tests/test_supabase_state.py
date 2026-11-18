@@ -182,13 +182,50 @@ def test_canonical_lookup_uses_three_encoded_eq_queries_and_full_state(postgrest
     snapshot = create_state_store(settings(tmp_path)).lookup_posting_state(item)
     assert snapshot == {"posting": row, "evaluation": evaluation, "application": application}
     queries = [parse_qs(urlsplit(call[1]).query) for call in postgrest.calls]
-    assert queries[0]["posting_key"] == ['eq."' + posting_key(item) + '"']
-    assert queries[1]["normalized_url"] == ['eq."' + item.url + '"']
-    assert queries[2]["platform"] == ['eq."' + item.platform.lower() + '"']
-    assert queries[2]["platform_id"] == ['eq."123"']
+    assert queries[0]["posting_key"] == ["eq." + posting_key(item)]
+    assert queries[1]["normalized_url"] == ["eq." + item.url]
+    assert queries[2]["platform"] == ["eq." + item.platform.lower()]
+    assert queries[2]["platform_id"] == ["eq.123"]
     assert all(call[0] == "GET" for call in postgrest.calls)
     assert all(q["select"] == ["*"] and q["limit"] == ["2"] for q in queries)
-    assert queries[3]["posting_key"] == ['eq."legacy:key"']
+    assert queries[3]["posting_key"] == ["eq.legacy:key"]
+
+
+@pytest.mark.parametrize("changes", [
+    {},
+    {"platform": "점핏", "platform_id": "00123", "url": "https://example.invalid/jobs/00123"},
+    {"platform": "ASCII", "platform_id": "a%2Fb", "url": "https://example.invalid/jobs/a%2Fb"},
+])
+def test_canonical_lookup_matches_scalar_eq_values_without_added_quotes(postgrest, posting, tmp_path, changes):
+    """Request-sensitive HTTP transcript, not a PostgREST/database implementation.
+
+    Regress the observed live scalar-eq behavior: added quotes are literal data.
+    Decode URL encoding once; never strip quotes or decode identity text again.
+    """
+    from urllib.parse import parse_qs, urlsplit
+    item = posting(**changes)
+    row = canonical_row(item)
+    key = row["posting_key"]
+    evaluation = {"posting_key": key, "evaluation_json": {"total": 70}, "updated_at": "fixture"}
+    application = {"posting_key": key, "status": "submitted", "notes": {"memo": "preserve"},
+                   "attempt_id": None, "submitted_at": None, "confirmation_evidence": None, "updated_at": "fixture"}
+    records = {"postings": row, "evaluations": evaluation, "applications": application}
+
+    def reply(calls):
+        method, path, _, body = calls[-1]
+        assert method == "GET" and body is None
+        parsed = urlsplit(path)
+        query = parse_qs(parsed.query)
+        assert query.pop("select") == ["*"] and query.pop("limit") == ["2"]
+        record = records[parsed.path.removeprefix("/rest/v1/job_assist_")]
+        matches = all(values == ["eq." + record[field]] for field, values in query.items())
+        return 200, [record] if matches else [], {}
+
+    postgrest.replies.extend([reply] * 5)
+    snapshot = create_state_store(settings(tmp_path), read_only=True).lookup_posting_state(item)
+    assert snapshot == {"posting": row, "evaluation": evaluation, "application": application}
+    assert len(postgrest.calls) == 5
+    assert not postgrest.replies
 
 
 @pytest.mark.parametrize("case", ["multiple", "split", "wrong_predicate", "missing_column", "inconsistent", "bad_state_key"])
