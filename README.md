@@ -1,22 +1,20 @@
 # Hermes 채용 지원 보조 시스템
 
-채용 공고의 **수집 → 지원 조건 판별 → 적합도 검토 → 이력서·자기소개서 초안 → 결과 기록**을 돕는 Python CLI와 에이전트 스킬입니다. CLI 일괄 실행의 공고와 검토 상태는 로컬에서 실행해도 **기존 Supabase PostgreSQL**에 저장합니다. 실제 지원서 제출은 기본적으로 비활성화돼 있습니다.
+채용 공고의 **수집 → 지원 조건 판별 → 적합도 검토 → 이력서·자기소개서 초안 → 결과 기록**을 돕는 Python CLI와 에이전트 스킬입니다. CLI 일괄 실행은 로컬에서 실행해도 공고와 검토 상태를 **기존 Supabase PostgreSQL**에 저장합니다.
 
 ## 개발 규칙
 
 에이전트 문서 탐색은 [AGENTS.md](AGENTS.md)에서 시작합니다. 작업별 후속 문서는 [기능 색인](docs/agents/README.md), 코드·문서·CI/PR 변경은 [개발 진입점](docs/agents/development.md)으로 연결되며 관련 경로만 읽습니다.
 
-작업 흐름은 [CONTRIBUTING.md](CONTRIBUTING.md), 코드·브랜치·커밋 규칙은 [개발 컨벤션](docs/CONVENTIONS.md), 기술 선택 근거는 [ADR](docs/adr/README.md)을 따릅니다. 새 기술·인프라·보안/보존 정책은 구현 전 ADR로 비교하며, 결정 승인과 실제 배포/검증을 구분합니다.
+작업 흐름은 [CONTRIBUTING.md](CONTRIBUTING.md), 코드·브랜치·커밋 규칙은 [개발 컨벤션](docs/CONVENTIONS.md), 기술 선택은 [ADR 규칙·기록](docs/adr/README.md)을 따릅니다.
 
 ## 제품 방향과 구현 범위
 
-이 프로젝트는 [셀프호스팅형 에이전트 채용 자동화 도구](docs/PRODUCT_SCOPE.md)를 지향합니다. 공통 Python 도구와 에이전트별 스킬/연결 설정을 제공하고, PC가 꺼진 동안에는 별도 원격 실행 환경이 작업하도록 설계합니다. 웹서비스나 다중 사용자 SaaS가 필수인 것은 아닙니다.
+제품의 목표와 배포 형태는 [제품 범위](docs/PRODUCT_SCOPE.md), 구현·검증 상태는 아래 표를 참고하세요.
 
 현재 여러 사이트의 브라우저 수집부터 회사 조사·맞춤 문서·무인 자동지원까지 전체 흐름이 완성된 것은 아닙니다. 앱 상태 저장은 ADR-0005에 따라 Supabase PostgreSQL로 단일화했습니다. 로컬 HTTP 계약·격리 PostgreSQL 테스트와 실제 Supabase 배포/설정 검증은 별개이며, ADR의 과거 개인환경 검증 기록을 현재 체크아웃의 배포 완료로 해석하지 않습니다.
 
-선택한 수집 경로는 **클라우드 브라우저/MCP**입니다. PC-on에는 로컬에서 작업을 시작하고, PC-off에는 GitHub Actions 예약 작업이 같은 클라우드 수집·기존 Supabase 저장을 실행하도록 설계합니다. **사람인 공식 API는 이 운영 경로에서 폐기**했으며 승인·키를 필수 조건으로 요구하지 않습니다. [ADR-0011](docs/adr/0011-private-collection-writer.md)의 결정·승인 범위와 실제 구현/가동 상태를 구분합니다.
-
-공개 공고의 진행·중단 판정은 [현행 플랫폼 접근 정책](docs/PLATFORM_ACCESS.md)을 따릅니다. 명시적 허가 미확인만으로 일괄 중지하지 않으며, 적용되는 명시적 제한과 접근 차단·구현 미완료는 구분합니다. 문서 정책 변경이 실제 수집기·예약 가동을 뜻하지는 않습니다.
+공고 수집을 준비할 때는 [선택한 수집 경로와 기존 API의 차이](docs/PLATFORM_ACCESS.md#선택한-수집-경로와-기존-코드), 접근 전에는 [현행 진행·중단 기준](docs/PLATFORM_ACCESS.md#진행중단-기준)을 확인하세요. 운영 결정과 승인 범위는 [ADR-0011](docs/adr/0011-private-collection-writer.md)을 따릅니다.
 
 PR 발행·리뷰·수정·CI 확인은 [에이전트 주도 PR 자동화](docs/PR_AUTOMATION.md)를 따릅니다. 실행 실패에는 필요한 경우 [간단한 실패 기록](docs/templates/run-failure.md)을 사용하며, 모든 실패에 기업용 장애 보고서를 요구하지 않습니다.
 
@@ -38,12 +36,12 @@ PR 발행·리뷰·수정·CI 확인은 [에이전트 주도 PR 자동화](docs/
 | 이미지 OCR | Windows 한국어 OCR로 로컬 이미지의 텍스트를 JSON 추출 | OCR 언어 기능 필요. 날짜·숫자·필수조건은 원본 대조 전까지 확인 필요 |
 | 브라우저·양식 진단 | `runtime-check`, `form-dry-run`으로 합성 HTML의 브라우저/입력 동작 검사 | 로컬 fixture 검증이며 실사이트 로그인·수집·제출 성공을 뜻하지 않음 |
 | Sheets·Drive·Telegram | 결과 행 기록, 생성 서류 업로드, 완료 알림 구현 | 연결 설정과 `--execute` 필요. 모든 실계정 연동을 현재 검증했다는 의미는 아님 |
-| 실제 지원서 제출 | 승인 검사·원자적 claim·결과 불명 시 재시도 차단 helper 구현 | `run`/`finalize`에 실사이트 제출이 연결된 것은 아니며 무인 자동지원 미완성 |
+| 실제 지원서 제출 | 승인 검사·원자적 claim·결과 불명 시 재시도 차단 helper 구현 | 기본 비활성화. `run`/`finalize`에 실사이트 제출 미연결. [공고별 제출 승인](docs/OPERATIONS.md#제출-승인) 참고 |
 | 원격 운영·예약·보관 후 삭제 | 수집/저장 job 분리와 조건부 1회 원격 저장 검증 승인 | 운영 구현·예약 가동은 미완료. 예약은 1회 검증 후 별도 승인. 공고 7일 자동 삭제 구현은 저장소에 없으며 별도 운영 DB 예약은 미검증 |
 
 사람인 외 플랫폼의 공개 페이지 조사와 자동 수집기 활성화는 별개입니다. 접근 실패·보안 확인·상세 요건 미확인은 공고 없음으로 처리하지 않습니다. 허용된 조사 결과도 **로컬 JSON만 생성했다면 DB에 자동 저장된 것이 아닙니다**. 출처와 검토 상태를 보존해 승인된 저장 경로로 등록하고, 정확한 공고 키로 원격 재조회해야 저장 완료입니다.
 
-`AUTO_SUBMIT` 기본값은 `false`입니다. CAPTCHA, OTP, 로그인 재인증은 사람이 처리하며 우회하지 않습니다. 공고 저장은 지원 승인·제출이 아닙니다.
+공고 저장은 지원 승인·제출이 아닙니다.
 
 ## 클라우드에서 개발
 
@@ -51,7 +49,7 @@ GitHub 저장소의 **Code → Codespaces → Create codespace on main** 또는 
 
 개인 이력서·포트폴리오·생성 결과·프로필·자격 증명은 저장소에 포함하지 않습니다. `profile.example.json`은 빈 템플릿입니다. 실제 프로필은 무시되는 `profile.json`에 보관합니다.
 
-PC-off 운영 방향은 [GitHub Actions 일회성 배치·공개 개발/비공개 운영 분리](docs/adr/0006-actions-batch-boundary.md), PC-on과 공통 수집·원격 저장 계약은 [ADR-0011](docs/adr/0011-private-collection-writer.md)로 결정했습니다. 별도 상시 Hermes Cloud/VPS를 필수로 두지 않습니다. 아래 클라우드 개발환경과 Cloud 설치 예시는 선택적 대안이며 운영 인증·예약이 가동됐다는 뜻은 아닙니다. OS/OCR 등 남은 제한은 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
+클라우드 개발환경과 Cloud 설치 예시는 선택적 대안입니다. 운영 인증·예약 가동의 증거가 아닙니다. OS/OCR 등 범위는 [클라우드 개발·운영 안내](docs/CLOUD_DEVELOPMENT.md)를 확인하세요.
 
 ## 설치
 
@@ -106,7 +104,7 @@ python -m hermes_job_automation.cli runtime-check
 
 ## 공고별 수정과 이미지 OCR
 
-사용자가 공고 URL과 이력서/포트폴리오를 첨부하면 `skills/job-tailoring/SKILL.md`의 **공고 분석 → 공식 회사 사이트 분석(불가하면 생략 이유 기록) → 원본을 보존한 이력서 수정 → 적합도·사실성 검토 → 결과 저장** 절차를 사용합니다. 이는 Hermes 작업 절차이며, 기존 Python 일괄 실행에 회사 사이트 분석과 원본 이력서 편집이 자동 연결된 것은 아닙니다.
+공고 URL과 이력서/포트폴리오를 첨부한 경우 [단일 공고 스킬](skills/job-tailoring/SKILL.md)의 공고·회사 분석, 원본 보존 편집, 검토 절차를 따릅니다.
 
 에이전트가 원문과 대조해 만든 단일 공고 검토 입력은 [단일 공고 빌드](docs/SINGLE_JOB_CASE.md)의 `build-case --file ... --output-dir ...`로 실행할 수 있습니다. 기존 Supabase 공고는 GET만 조회하고, 문서와 검토 결과는 아직 없는 새 로컬 폴더에 저장합니다. 원본에 학력·연락처·재직 상세가 없으면 예시 프로필로 보충하지 않으며, 초안에 정보 보완 상태를 남깁니다. 이 명령은 `finalize`와 달리 DB 평가를 저장하지 않습니다.
 
@@ -124,7 +122,7 @@ GitHub 스킬 조사와 출처는 `docs/OCR_SKILL_RESEARCH.md`에 있습니다. 
 
 ## 예약 실행
 
-**선택한 운영 방향은 매일 04:00 `Asia/Seoul`의 GitHub-hosted 배치**입니다. 현재 공개 저장소는 비밀 없는 개발 CI를 유지하며, 민감 운영은 별도 비공개 영역으로 분리합니다. [ADR-0006](docs/adr/0006-actions-batch-boundary.md)과 [ADR-0011](docs/adr/0011-private-collection-writer.md)을 확인하세요. 조건부 1회 수동 원격 저장 검증은 승인됐지만 실제 운영 workflow·인증·예약은 아직 구현/등록하지 않았습니다. 예약 가동은 별도 승인 대상이며 GitHub 예약은 지연·누락될 수 있어 정각 시작을 보장하지 않습니다.
+PC-off 실행의 호스트·시각·격리 결정과 실제 가동 여부는 [운영 가이드의 예약과 재부팅](docs/OPERATIONS.md#예약과-재부팅)을 확인하세요.
 
 다음은 **선택적 로컬 실행 예시**입니다. PC-off 운영 경로가 아니며 예약 등록은 별도 승인 대상입니다. 로그인한 Windows 세션에서 매일 04:00 KST 실행하도록 등록하는 기존 스크립트:
 
@@ -147,7 +145,7 @@ Hermes Gateway가 상시 실행되는 서버에서는 hermes/cron-job.txt의 Cro
 - Google Sheets/Drive: OAuth 데스크톱 클라이언트 또는 공유된 서비스 계정
 - GPT: Hermes의 ChatGPT/Codex 구독 연결을 우선 사용하거나, OpenAI API key와 model 지정
 - Telegram: bot token과 본인 chat ID
-- 채용 사이트: 선택한 클라우드 브라우저/MCP 경로의 접근·수집 허용 범위 확인. 사람인 API 신청·키 발급은 선행 조건이 아님
+- 채용 사이트: [선택한 수집 경로와 기존 코드](docs/PLATFORM_ACCESS.md#선택한-수집-경로와-기존-코드) 확인
 
 상세 설정은 docs/GOOGLE_WORKSPACE_SETUP.md, docs/OPERATIONS.md, docs/PLATFORM_ACCESS.md를 참고하세요.
 
@@ -157,6 +155,4 @@ Hermes Gateway가 상시 실행되는 서버에서는 hermes/cron-job.txt의 Cro
 
 & "$RuntimeRoot\.venv\Scripts\python.exe" -m hermes_job_automation.cli form-dry-run
 
-실제 사이트 제출은 조건별 사용자 승인 레코드, AUTO_SUBMIT=true, FORM_AUTOFILL_ENABLED=true가 모두 있어야 시도할 수 있습니다. 제출 직전 Supabase 상태 저장소에 원자적 claim과 시도 ID가 기록되고, 접수 번호나 완료 화면이 확인되지 않으면 결과를 성공으로 표시하지 않습니다. 진행 중이거나 결과가 불명확한 신청은 재시도하지 않고 수동 확인 상태로 남깁니다.
-
-이는 제출 helper의 안전 계약이며, 현재 `run`/`finalize`가 각 사이트의 로그인·지원 버튼까지 실행한다는 뜻은 아닙니다. 실사이트 제출 연결과 검증은 별도 작업입니다.
+로컬 양식 검사는 실제 지원이 아닙니다. 제출 적용 범위, 공고별 승인, 중복 방지, 결과 확인은 [운영 가이드의 제출 승인](docs/OPERATIONS.md#제출-승인)을 따릅니다.
