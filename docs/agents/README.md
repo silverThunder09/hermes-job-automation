@@ -1,6 +1,6 @@
 # 기능별 문서 라우팅
 
-이 파일은 필요할 때 여는 색인입니다. 작업에 맞는 **한 섹션·한 행부터** 읽고 그 행의 조건이 성립할 때만 다음 문서를 엽니다. 단일 공고 전체 작업은 [job-tailoring](../../skills/job-tailoring/SKILL.md), 일괄 작업은 [job-search](../../skills/job-search/SKILL.md)가 순서를 소유합니다. 문서 탐색만으로 도구 실행·계정 연결·외부 변경을 승인하지 않습니다.
+이 파일은 [작업 라우터](../../AGENTS.md)에서 연결되는 기능 색인입니다. 작업에 맞는 **한 섹션·한 행부터** 읽고 그 행의 조건이 성립할 때만 다음 문서를 엽니다. 문서 탐색만으로 도구 실행·계정 연결·외부 변경을 승인하지 않습니다.
 
 ## Research
 
@@ -23,7 +23,7 @@
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | 수집기·플랫폼 이용 허용 범위 | [플랫폼 정책](../PLATFORM_ACCESS.md) | 사람인은 [개인/기업 약관·단계별 미확인 관문](../SARAMIN_ACCESS.md). 공개 안내 재조회와 반복 공고 수집은 별개 |
-| 명시적 허가 미확인·진행/중단 판정 | [현행 판정 원본](../PLATFORM_ACCESS.md#진행중단-기준) | [ADR-0012](../adr/0012-public-collection-policy.md). 미확인만으로 일괄 중지하지 않음. 과거 조사·ADR의 중지 조건보다 후속 결정을 우선하며 명시적 제한·접근 통제는 유지 |
+| 명시적 허가 미확인·진행/중단 판정 | [현행 판정 원본](../PLATFORM_ACCESS.md#진행중단-기준) | 정책 변경 근거가 필요할 때만 [ADR-0012](../adr/0012-public-collection-policy.md). 과거 조사는 이력으로 사용 |
 | 지원 승인·중복 방지·실제 제출 | [운영 문서의 제출 승인](../OPERATIONS.md#제출-승인) | 플랫폼 정책, 해당 계정·공고별 승인, `application.py`와 `state.py`의 실제 구현 대조. helper 존재는 실사이트 제출 통합 증거가 아님 |
 
 ## Storage
@@ -40,7 +40,7 @@
 | 작업 | 먼저 읽을 곳 | 필요한 경우에만 추가 |
 |---|---|---|
 | 인증 없는 Chromium 진단·CI 실패 | [runtime-check 계약](../../README.md#오프라인-브라우저-실행-진단) | `runtime_check.py`, `tests/test_runtime_check.py`, `.github/workflows/ci.yml`. 운영 설정/모델 인증 문서 로드 불필요 |
-| PC-on/PC-off 클라우드 수집·원격 저장 연결 | [수집/저장 분리 ADR-0011](../adr/0011-private-collection-writer.md) | 로컬 시작/Actions 시작, 조건부 1회 검증 승인과 미구현·예약 미가동을 구별. 사람인 API 승인·키는 폐기한 경로이며 prerequisite으로 되돌리지 않음. 실제 사이트 접근 전 [Access](#access), DB 접근 전 [Storage](#storage)만 추가 |
+| PC-on/PC-off 클라우드 수집·원격 저장 연결 | [선택한 수집 경로](../PLATFORM_ACCESS.md#선택한-수집-경로와-기존-코드) | 실제 연결·검증 전 [수집/저장 분리 결정과 승인 범위](../adr/0011-private-collection-writer.md) 필수. 사이트 접근 전 [Access](#access), DB 접근 전 [Storage](#storage), 예약 작업은 [운영 안내](../OPERATIONS.md#예약과-재부팅) |
 | 설치·Codespaces·OS/폰트 경계 | [개발/클라우드 실행 경계](../CLOUD_DEVELOPMENT.md) | 패키지/테스트 명령은 [개발 진입점](development.md). 개발환경은 운영 배포가 아님 |
 | GPT 모델·구독·인증 연결 조사 | [Supabase 재사용 우선안 ADR-0008](../adr/0008-supabase-auth-reuse.md) | 접점·최초 접속 자격 선택은 [ADR-0009](../adr/0009-scoped-auth-db-access.md). 현재 [수명주기 계약](../SUPABASE_AUTH_DESIGN.md#credential-lifecycle)과 권고 조합은 **Proposed·운영 미구현**, 기술 선택 후 구현. [ADR-0007](../adr/0007-remote-model-auth.md)·[GitHub 계약](../REMOTE_AUTH_DESIGN.md#credential-lifecycle)은 비교 이력. [기존 공식 조사](../HERMES_OFFICIAL_RESEARCH.md)·[최신 Hermes 문서](https://hermes-agent.nousresearch.com/docs/integrations/providers)·실제 코드를 대조하고 Hermes/Python API/standalone Codex를 분리 |
 | PC-off 예약·인증 보존·임시파일 정리 | [04시 Actions 배치·공개/비공개 경계 ADR-0006](../adr/0006-actions-batch-boundary.md) | 호스트·시각·격리만 확정. [보존/삭제 제안 ADR-0003](../adr/0003-scheduled-collection-and-retention.md)은 여전히 Proposed. [운영 안내](../OPERATIONS.md#예약과-재부팅)·[클라우드 경계](../CLOUD_DEVELOPMENT.md#3-pc가-꺼져도-매일-실행)를 필요한 경우만 읽고 미결정 인증/자료/비용·가동 승인 관문 유지 |

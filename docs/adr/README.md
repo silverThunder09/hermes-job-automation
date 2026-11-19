@@ -4,7 +4,7 @@
 
 ## 작성 대상과 시점
 
-새 DB/프레임워크/모델 제공자/외부 서비스/실행 인프라/주요 의존성, 개인정보·권한·보존 정책 또는 쉽게 되돌리기 어려운 변경은 코딩 전에 ADR 초안을 작성합니다. 작은 오탈자나 기존 선택 안의 국소 수정은 PR의 `ADR` 항목에 불필요 이유를 적습니다. 표준 라이브러리 함수마다 ADR을 만들지는 않습니다.
+새 DB/프레임워크/모델 제공자/외부 서비스/실행 인프라/주요 의존성, 보안·개인정보·권한·보존 정책 또는 쉽게 되돌리기 어려운 변경은 코딩 전에 ADR 초안을 작성합니다. 작은 오탈자나 기존 선택 안의 국소 수정은 PR의 `ADR` 항목에 불필요 이유를 적습니다. 표준 라이브러리 함수마다 ADR을 만들지는 않습니다.
 
 1. 기존 ADR과 이슈를 확인하고 다음 번호 `NNNN-kebab-case.md`를 사용합니다. 번호를 재사용하거나 기존 결정을 덮어쓰지 않습니다.
 2. [템플릿](template.md)에 요구사항·제약·대안·선택 이유·비용/보안·검증 기준·되돌리는 조건을 씁니다. 사실/추정/미확인을 구분합니다.
@@ -21,7 +21,7 @@
 | [0001](0001-local-sqlite-baseline.md) | Historical | 초기 SQLite 사용 사실과 로컬 실행에서의 장단점 |
 | [0002](0002-shared-supabase-state.md) | Superseded | Supabase 도입/SQLite 공존의 이력. 공존 정책은 0005가 대체 |
 | [0003](0003-scheduled-collection-and-retention.md) | Proposed | 보존·삭제·운영 세부 미결정. 실행 호스트/시각 경계는 0006 후속 결정 |
-| [0004](0004-quality-gates-and-approvals.md) | Proposed | Git 훅·이슈 대응·승인 경계: 구현/활성화 전 결정 필요 |
+| [0004](0004-quality-gates-and-approvals.md) | Proposed | Git 훅·이슈 대응·승인 매트릭스 제안. [현행 규칙과 별도](../WORKFLOW_POLICY.md#현행-규칙) |
 | [0005](0005-supabase-postgres-only.md) | Accepted | Supabase PostgreSQL 단일 저장소로 통일, 앱/테스트의 SQLite 제거 |
 | [0006](0006-actions-batch-boundary.md) | Accepted — 실행·격리 경계만 | 04시 Asia/Seoul GitHub 배치, 공개 개발/비공개 운영 분리. 인증 세부·자원 생성·가동은 별도 |
 | [0007](0007-remote-model-auth.md) | Proposed — 비교 이력 | GitHub environment Secret/App writer 후보의 이유·제약 보존. 현재 추가 비교·우선 후보는 0008, 기술 선택은 미승인 |
