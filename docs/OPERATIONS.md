@@ -17,7 +17,7 @@
 - python -m hermes_job_automation.cli sources: 기존 Python 수집기를 실행합니다. 기존 사람인 API 설정이 활성화돼 있으면 실제 API를 호출할 수 있습니다. 선택한 클라우드 브라우저/MCP 경로의 상태 조회 명령이 아닙니다.
 - python -m hermes_job_automation.cli run --collect-only: 기존 Python 경로에서 설정된 소스와 수동 파일을 처리하고, 신규 검토 후보가 있으면 data/to-review.json을 만듭니다. 빈 결과로 기존 검토 대기열을 지우지 않습니다.
 - Hermes 모델이 점수와 문서 초안을 만든 뒤 job-assist finalize --file <검토 JSON>으로 Supabase에 상태를, 로컬에 문서를 저장합니다. `run`/`finalize`는 `--execute` 없이도 Supabase 상태 DB에 쓰므로 오프라인 미리보기 명령이 아닙니다.
-- job-assist finalize --file <검토 JSON> --execute: 설정과 결과에 따라 Google Sheets/Drive에 쓰고 Telegram 요약을 전송할 수 있습니다. CLI는 대상별 사용자 승인 기록을 검사하지 않으므로 실행 전에 운영자가 대상·데이터·전송 범위를 승인받았는지 확인합니다. `--execute`는 실제 사이트 제출을 실행하거나 승인하지 않습니다.
+- `run --execute`와 `finalize --execute`는 설정과 처리 결과에 따라 Google Sheets에 행을 추가하고, Drive에 생성 서류를 업로드하고, Telegram으로 요약을 보낼 수 있습니다. 두 명령 모두 CLI에서 대상별 사용자 승인 기록을 검사하지 않으므로 실행 전에 운영자가 대상·데이터·전송 범위의 승인을 확인합니다. `--execute`는 실제 사이트 제출을 실행하거나 승인하지 않습니다.
 
 ### 수집 결과와 종료 코드
 
@@ -36,11 +36,11 @@
 
 ## 제출 승인
 
-기본 작업은 초안·검토까지이며, 실제 지원서 제출은 공고별 승인만 허용합니다. `approve-posting`은 대화형 터미널에서 회사, 공고 ID, 도메인, 점수 상한, 조건을 표시하고 사용자가 고정 승인문을 직접 입력해야 승인 파일을 저장합니다. 승인은 지정한 플랫폼·공고 ID·도메인·조건·유효기간·점수 상한 안에서만 유효합니다.
+기본 작업은 초안·검토까지이며, 실제 지원서 제출은 공고별 승인만 허용합니다. `approve-posting`은 대화형 터미널에서 플랫폼·공고 ID·도메인·점수 상한·조건을 표시하고, 사용자가 고정 승인문을 직접 입력해야 승인 파일을 저장합니다. 승인은 지정한 플랫폼·공고 ID·도메인·조건·유효기간·점수 상한 안에서만 유효합니다. 회사와 공고가 맞는지, 실제로 승인 조건을 충족하는지는 운영자가 확인합니다. helper는 조건이 기록됐는지만 검사합니다.
 
 공고별 승인 파일과 `AUTO_SUBMIT=true`, `FORM_AUTOFILL_ENABLED=true`, 적합 판정이 모두 필요합니다. CAPTCHA·OTP·로그인 요구는 [접근 정책](PLATFORM_ACCESS.md#진행중단-기준)에 따라 중단하며, 마감이 상충하거나 필수 입력이 없으면 사람의 검토를 기다립니다. 운영 절차상 이미 제출을 시도했거나 시도 여부가 불명확한 공고는 다시 제출하지 않고 사람이 결과를 확인합니다.
 
-제출 helper는 클릭 직전 Supabase RPC로 원자적 claim을 획득해 시도 ID를 기록합니다. RPC는 `submitting`, `submitted`, `unknown` 상태의 중복 claim을 막지만, 상태 검사만으로 과거 시도가 없다고 보장하지는 않습니다. 접수 완료 문구나 접수번호가 없으면 성공으로 기록하지 않습니다. 기본값은 `AUTO_SUBMIT=false`이며 기존 `run`/`finalize`에는 실사이트 제출이 연결돼 있지 않습니다.
+제출 helper는 클릭 직전 Supabase RPC로 원자적 claim을 획득해 시도 ID를 기록합니다. RPC는 `submitting`, `submitted`, `unknown` 상태의 중복 claim을 막지만, 상태 검사만으로 과거 시도가 없다고 보장하지는 않습니다. helper는 화면의 성공 관련 문자열로 상태를 판정하며 접수번호 값이나 접수 상태를 검증하지는 않습니다. 운영자는 실제 접수번호 또는 명시적인 접수 완료 상태를 확인한 경우에만 성공으로 보고합니다. 증거가 없으면 결과를 미확인으로 남기고 재시도하지 않습니다. 기본값은 `AUTO_SUBMIT=false`이며 기존 `run`/`finalize`에는 실사이트 제출이 연결돼 있지 않습니다.
 
 ## 예약과 재부팅
 
