@@ -18,6 +18,7 @@
 - python -m hermes_job_automation.cli run --collect-only: 기존 Python 경로에서 설정된 소스와 수동 파일을 처리하고, 신규 검토 후보가 있으면 data/to-review.json을 만듭니다. 빈 결과로 기존 검토 대기열을 지우지 않습니다.
 - Hermes 모델이 점수와 문서 초안을 만든 뒤 job-assist finalize --file <검토 JSON>으로 Supabase에 상태를, 로컬에 문서를 저장합니다. `run`/`finalize`는 `--execute` 없이도 Supabase 상태 DB에 쓰므로 오프라인 미리보기 명령이 아닙니다.
 - `run --execute`와 `finalize --execute`는 설정과 처리 결과에 따라 Google Sheets에 행을 추가하고, Drive에 생성 서류를 업로드하고, Telegram으로 요약을 보낼 수 있습니다. 두 명령 모두 CLI에서 대상별 사용자 승인 기록을 검사하지 않으므로 실행 전에 운영자가 대상·데이터·전송 범위의 승인을 확인합니다. `--execute`는 실제 사이트 제출을 실행하거나 승인하지 않습니다.
+  - Google Sheets에 새 행을 추가하면 같은 탭의 기존 행도 영향을 받습니다. A:J 열의 서식을 표준화하고, 헤더를 제외한 기존·신규 데이터 행을 수집일 내림차순으로 재정렬합니다. 실행 전 대상 탭의 행 추가뿐 아니라 이 서식 변경과 재정렬까지 승인받았는지 확인합니다.
 
 ### 수집 결과와 종료 코드
 
